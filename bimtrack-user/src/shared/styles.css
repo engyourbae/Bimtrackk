@@ -29,3 +29,6 @@ button{font:inherit;color:inherit;cursor:pointer}h1{font-size:1.4rem;margin:0 0 
 .bar{height:8px;background:var(--sec);border-radius:9px;overflow:hidden}.bar i{display:block;height:100%;background:var(--primary);transition:width .4s}
 @keyframes fade{from{opacity:0}}@keyframes up{from{transform:translateY(16px);opacity:0}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:8px 0;text-align:center}.day{min-height:44px;border:0;border-radius:10px;background:none;position:relative}.day:hover,.day.on{background:var(--sec)}.day i{position:absolute;bottom:6px;left:50%;width:6px;height:6px;margin-left:-3px;border-radius:50%;background:var(--acc)}
+.banner{background:var(--acc);color:#1a1a1a;padding:10px 12px;border-radius:10px;margin-bottom:10px}
+@media print{.side,.bnav,.toasts{display:none!important}}
