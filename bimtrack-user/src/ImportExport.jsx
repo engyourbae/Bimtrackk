@@ -2,7 +2,8 @@ import {useEffect,useState} from 'react';
 import {collection,getDocs,query,where,writeBatch,doc,deleteDoc,setDoc,onSnapshot,serverTimestamp} from 'firebase/firestore';
 import {db} from './firebase';
 import {COLS} from './config';
-import {Select,Badge,toast} from './shared/ui';
+import {Select,Badge,DatePicker,Icon,toast} from './shared/ui';
+import {todayStr} from '@shared/date';
 const safe=v=>{v=String(v??'');return /^[=+\-@\t\r]/.test(v)?"'"+v:v};
 const esc=(v,d)=>{v=safe(v);return v.includes('"')||v.includes(d)||/[\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
 function parse(t){t=t.replace(/^\uFEFF/,'');const f=t.split(/\r?\n/)[0]||'',d=(f.match(/;/g)||[]).length>(f.match(/,/g)||[]).length?';':',',rows=[];let r=[],c='',q=false;
@@ -10,7 +11,7 @@ function parse(t){t=t.replace(/^\uFEFF/,'');const f=t.split(/\r?\n/)[0]||'',d=(f
   r.push(c);if(r.some(x=>x.trim()))rows.push(r);return rows}
 const iso=v=>{v=(v||'').trim();const m=v.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);return m?`${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`:v};
 const save=(name,text,type)=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)};
-const names=Object.keys(COLS).map(k=>COLS[k].t),keyOf=t=>Object.keys(COLS).find(k=>COLS[k].t===t),today=()=>new Date().toISOString().slice(0,10);
+const names=Object.keys(COLS).map(k=>COLS[k].t),keyOf=t=>Object.keys(COLS).find(k=>COLS[k].t===t),today=todayStr;
 const load=(c,uid)=>getDocs(query(collection(db,c),where('ownerUid','==',uid))).then(s=>s.docs.map(d=>d.data()));
 export default function ImportExport({uid}){
   const[tab,setTab]=useState('Ekspor'),[col,setCol]=useState('Bimbingan'),[rows,setRows]=useState([]),[sel,setSel]=useState({}),[from,setFrom]=useState(''),[to,setTo]=useState(''),[delim,setDelim]=useState('Titik koma (Excel Indonesia)');
@@ -34,11 +35,11 @@ export default function ImportExport({uid}){
   return <div><h1>CSV dan Backup</h1><div className="row" style={{marginBottom:12}}>{['Ekspor','Impor','Backup'].map(t=><button key={t} className={'btn '+(tab===t?'':'sec')} onClick={()=>setTab(t)}>{t}</button>)}</div>
     {tab!=='Backup'&&<div className="fld"><label>Data</label><Select value={col} options={names} onChange={v=>{setCol(v);setSel({});setCsv(null)}}/></div>}
     {tab==='Ekspor'&&<><div className="fld"><label>Pemisah kolom</label><Select value={delim} options={['Titik koma (Excel Indonesia)','Koma']} onChange={setDelim}/></div>
-      <div className="row" style={{marginBottom:10}}><input className="in" style={{flex:1}} type="date" value={from} onChange={e=>setFrom(e.target.value)}/><input className="in" style={{flex:1}} type="date" value={to} onChange={e=>setTo(e.target.value)}/></div>
+      <div className="row" style={{marginBottom:10}}><div style={{flex:1,minWidth:140}}><DatePicker label="Dari tanggal" placeholder="Dari tanggal" value={from} onChange={setFrom}/></div><div style={{flex:1,minWidth:140}}><DatePicker label="Sampai tanggal" placeholder="Sampai tanggal" value={to} onChange={setTo}/></div></div>
       <div className="row" style={{marginBottom:10}}>{F.map(f=><button key={f.k} className={'badge '+(sel[f.k]===false?'':'ok')} style={{border:0,minHeight:32}} onClick={()=>setSel({...sel,[f.k]:sel[f.k]===false})}>{f.label}</button>)}</div>
       <div className="card" style={{overflowX:'auto'}}><p className="mut" style={{margin:'0 0 6px'}}>Pratinjau ({data.length} baris)</p><table style={{fontSize:'.8rem',borderCollapse:'collapse'}}><thead><tr>{cols.map(f=><th key={f.k} style={{textAlign:'left',padding:4}}>{f.label}</th>)}</tr></thead><tbody>{data.slice(0,5).map(r=><tr key={r.id}>{cols.map(f=><td key={f.k} style={{padding:4,maxWidth:160,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{r[f.k]}</td>)}</tr>)}</tbody></table></div>
       <button className="btn" style={{width:'100%'}} disabled={!data.length} onClick={exportCsv}>Ekspor CSV (UTF-8 BOM)</button></>}
-    {tab==='Impor'&&<><input type="file" accept=".csv,text/csv" className="in" onChange={pick}/>
+    {tab==='Impor'&&<><label className="btn sec block" style={{cursor:"pointer"}}><Icon name="upload" size={18}/> Pilih berkas CSV<input type="file" accept=".csv,text/csv" className="sr" onChange={pick}/></label>
       {csv&&<><h2 style={{marginTop:14}}>Pemetaan kolom</h2>{F.map(f=><div className="fld" key={f.k}><label>{f.label}{f.req&&' *'}</label><Select value={map[f.k]} placeholder="(abaikan)" options={['(abaikan)',...csv.h]} onChange={v=>setMap({...map,[f.k]:v==='(abaikan)'?undefined:v})}/></div>)}
         <div className="card"><p style={{margin:0}}><Badge>Valid {A.ok.length}</Badge> <Badge>Duplikat {A.dup.length}</Badge> <span className="badge no">Tidak valid {A.bad.length}</span></p>{A.bad.slice(0,8).map(b=><p key={b.n} className="mut" style={{margin:'4px 0',fontSize:'.85rem'}}>Baris {b.n}: {b.why}</p>)}{A.dup.length>0&&<p className="mut" style={{fontSize:'.85rem'}}>Duplikat dilewati: baris {A.dup.slice(0,10).map(d=>d.n).join(', ')}</p>}</div>
         <button className="btn" style={{width:'100%'}} disabled={busy||!A.ok.length} onClick={doImport}>Impor {A.ok.length} baris (data lama tidak diubah)</button></>}</>}

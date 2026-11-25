@@ -1,1 +1,72 @@
-{"name":"BIMTRACK","short_name":"BIMTRACK","start_url":"./","scope":"./","display":"standalone","background_color":"#F5F6F2","theme_color":"#426B59","icons":[{"src":"icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},{"src":"icon-512.png","sizes":"512x512","type":"image/png","purpose":"any"},{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any"}]}
+{
+  "name": "BIMTRACK",
+  "short_name": "BIMTRACK",
+  "description": "Catat bimbingan, ubah arahan dosen jadi daftar revisi, dan pantau progres skripsi per bab. Nyaman di HP, tetap bisa dibuka saat sinyal lemah.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "lang": "id",
+  "dir": "ltr",
+  "background_color": "#F5F6F2",
+  "theme_color": "#F5F6F2",
+  "categories": [
+    "education",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Tambah Bimbingan",
+      "short_name": "Bimbingan",
+      "description": "Catat bimbingan baru",
+      "url": "./#/bim/baru",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Tambah Revisi",
+      "short_name": "Revisi",
+      "description": "Catat revisi baru",
+      "url": "./#/rev/baru",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}

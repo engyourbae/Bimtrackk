@@ -4,7 +4,10 @@ import {doc,onSnapshot,setDoc,getDoc,addDoc,updateDoc,collection,query,where,ser
 import {auth,db} from './firebase';
 import {nimEmail,validNim} from './shared/nim';
 import {getTheme,setTheme} from './shared/theme';
-import {ToastHost,toast,Pass,Ic,P,Badge,ThemePick,Modal} from './shared/ui';
+import {ToastHost,toast,Pass,Icon,Badge,ThemePick,Modal,Progress,PageHead} from './shared/ui';
+import AppShell from '@shared/shell';
+import {useRoute,navigate,replaceRoute} from '@shared/router';
+import {todayStr,addDays} from '@shared/date';
 import Crud from './Crud';
 import {BAB,BIM,ST,REV,JDW,RUN,DOK,BKT} from './config';
 import Cal from './Cal';
@@ -35,15 +38,15 @@ function ChangePass({uid,force}){const[p,setP]=useState(''),[b,setB]=useState(fa
 function Dash({uid,prof}){
   const[b,setB]=useState([]),[r,setR]=useState([]),[j,setJ]=useState([]),[ru,setRu]=useState([]);
   useEffect(()=>{const q=c=>query(collection(db,c),where('ownerUid','==',uid)),m=x=>x.docs.map(d=>d.data());const a=onSnapshot(q('bimbingan'),x=>setB(m(x))),c=onSnapshot(q('revisi'),x=>setR(m(x))),d=onSnapshot(q('jadwal'),x=>setJ(m(x))),e=onSnapshot(q('rundown'),x=>setRu(m(x)));return()=>{a();c();d();e()}},[uid]);
-  const n=s=>r.filter(x=>x.status===s).length,done=n(ST[4]),pct=r.length?Math.round(done/r.length*100):0,t=new Date().toISOString().slice(0,10),in3=new Date(Date.now()+3*864e5).toISOString().slice(0,10);
+  const n=s=>r.filter(x=>x.status===s).length,done=n(ST[4]),pct=r.length?Math.round(done/r.length*100):0,t=todayStr(),in3=addDays(t,3);
   const last=[...b].sort((x,y)=>(y.tanggal||'')<(x.tanggal||'')?-1:1).slice(0,3),nextJ=j.filter(x=>x.tanggal>=t&&x.status!=='Dibatalkan').sort((x,y)=>(x.tanggal+x.jam)<(y.tanggal+y.jam)?-1:1).slice(0,3),warn=ru.filter(x=>x.deadline&&x.deadline<=in3&&x.status!=='Selesai').sort((x,y)=>x.deadline<y.deadline?-1:1);
   return <div><h1>Halo, {prof.nama}</h1><div className="grid">{[['Bimbingan',b.length],['Revisi',r.length],['Belum dikerjakan',n(ST[0])],['Selesai',done]].map(([l,v])=><div key={l} className="card stat"><span className="mut">{l}</span><b>{v}</b></div>)}</div>
     {warn.length>0&&<div className="card" style={{borderColor:'var(--dan)'}}><h2>Pengingat deadline</h2>{warn.map(x=><p key={x.id} style={{margin:'6px 0'}}><b>{x.nama}</b> · {x.deadline<t?'terlambat sejak ':'deadline '}{x.deadline}</p>)}</div>}
-    <div className="card"><h2>Progres revisi {pct}%</h2><div className="bar"><i style={{width:pct+'%'}}/></div><p className="mut" style={{fontSize:'.85rem'}}>Sedang dikerjakan: {n(ST[1])} · Menunggu pemeriksaan: {n(ST[2])} · Perlu revisi ulang: {n(ST[3])}</p></div>
+    <div className="card"><h2>Progres revisi {pct}%</h2><Progress value={pct} size="lg" label="Progres revisi"/><p className="mut" style={{fontSize:'.85rem'}}>Sedang dikerjakan: {n(ST[1])} · Menunggu pemeriksaan: {n(ST[2])} · Perlu revisi ulang: {n(ST[3])}</p></div>
     <div className="card"><h2>Jadwal mendatang</h2>{nextJ.length?nextJ.map(x=><p key={x.id} style={{margin:'6px 0'}}><b>{x.tanggal} {x.jam}</b> · {x.dosen}<br/><span className="mut">{x.agenda} · {x.status}</span></p>):<p className="mut">Belum ada jadwal.</p>}</div>
     <div className="card"><h2>Bimbingan terakhir</h2>{last.length?last.map(x=><p key={x.id}><b>{x.tanggal}</b> · {x.dosen}<br/><span className="mut">{x.topik}</span></p>):<p className="mut">Belum ada data.</p>}</div></div>}
 export default function App(){
-  const[u,setU]=useState(undefined),[prof,setProf]=useState(undefined),[req,setReq]=useState(undefined),[pg,setPg]=useState('home'),[menu,setMenu]=useState(false);
+  const[u,setU]=useState(undefined),[prof,setProf]=useState(undefined),[req,setReq]=useState(undefined),{page:pg,action}=useRoute();
   useEffect(()=>onAuthStateChanged(auth,x=>{setU(x);setProf(undefined);setReq(undefined)}),[]);
   useEffect(()=>{if(!u)return;const a=onSnapshot(doc(db,'users',u.uid),s=>setProf(s.exists()?s.data():null),()=>setProf(null));const b=onSnapshot(doc(db,'registrationRequests',u.uid),s=>setReq(s.exists()?s.data():null),()=>setReq(null));return()=>{a();b()}},[u]);
   let body;
@@ -52,18 +55,17 @@ export default function App(){
   else if(!prof?.approved)body=<div className="auth"><div className="card"><h2>{req?.status==='rejected'?'Pendaftaran ditolak':req?.status==='approved'?'Akses dinonaktifkan':'Menunggu persetujuan admin'}</h2><p className="mut">{req?.status==='rejected'?('Alasan: '+(req.reason||'-')):req?'Akun Anda belum dapat membuka data skripsi.':'Memproses pendaftaran...'}</p><button className="btn sec" onClick={()=>signOut(auth)}>Keluar</button></div></div>;
   else if(prof.mustChangePassword)body=<div className="auth"><ChangePass uid={u.uid} force/></div>;
   else{const du=prof.dataUid||u.uid;
-    const PG=[['home','Beranda',P.home],['bim','Bimbingan',P.book],['rev','Revisi',P.edit],['jdw','Jadwal',P.log],['run','Rundown',P.list],['dok','Dokumen & Drive',P.book],['bkt','Bukti revisi',P.eye],['rin','Ringkasan',P.edit],['cari','Pencarian',P.eye],['csv','CSV dan Backup',P.list],['set','Profil',P.user]],MAIN=['home','bim','rev','jdw'],late=x=>x.deadline&&x.deadline<new Date().toISOString().slice(0,10)&&x.status!=='Selesai'?'Terlambat':null;
-    const go=k=>{setPg(k);setMenu(false)};
-    body=<div className="app"><aside className="side"><div className="logo">BIM<i>TRACK</i></div>{PG.map(([k,l,d])=><button key={k} className={'nl'+(pg===k?' on':'')} onClick={()=>go(k)}><Ic d={d}/>{l}</button>)}</aside>
-    <main className="main" key={pg}><PwaBar/>{pg==='home'&&<Dash uid={du} prof={prof}/>}
-      {pg==='bim'&&<Crud col="bimbingan" uid={du} title="Bimbingan" fields={BIM} titleKey="topik" subKeys={['tanggal','dosen','metode']} filter={{key:'bab',label:'Bab',options:BAB}}/>}
-      {pg==='rev'&&<Crud col="revisi" uid={du} title="Revisi" fields={REV} titleKey="catatan" subKeys={['tanggal','bab','deadline','prioritas']} filter={{key:'status',label:'Status',options:ST}} urlKey="buktiUrl"/>}
-      {pg==='jdw'&&<Crud col="jadwal" uid={du} title="Jadwal" fields={JDW} titleKey="agenda" subKeys={['tanggal','jam','dosen','lokasi']} filter={{key:'status',label:'Status',options:JDW[6].options}} header={rows=><Cal rows={rows}/>}/>}
-      {pg==='run'&&<Crud col="rundown" uid={du} title="Rundown" fields={RUN} titleKey="nama" subKeys={['deadline','bab','prioritas']} sortKey="deadline" filter={{key:'status',label:'Status',options:RUN[6].options}} badge={late}/>}
-      {pg==='dok'&&<Crud col="dokumen" uid={du} title="Dokumen & Drive" fields={DOK} titleKey="nama" subKeys={['tanggal','folder','status']} filter={{key:'kategori',label:'Kategori',options:DOK[1].options}} urlKey="url"/>}
-      {pg==='bkt'&&<Crud col="fotoRevisi" uid={du} title="Bukti Revisi" fields={BKT} titleKey="nama" subKeys={['tanggal','revisiId']} filter={{key:'jenis',label:'Jenis',options:BKT[1].options}} urlKey="url"/>}
-      {pg==='rin'&&<Summary uid={du}/>}{pg==='cari'&&<Search uid={du} go={go}/>}{pg==='csv'&&<ImportExport uid={du}/>}
-      {pg==='set'&&<div><h1>Profil dan Pengaturan</h1><div className="card"><b>{prof.nama}</b><p className="mut">NIM {prof.nim}<br/>{prof.prodi} · {prof.fakultas}<br/>{prof.universitas}</p><Badge>Disetujui</Badge></div><div className="card"><div className="fld"><label>Tema</label><ThemePick get={getTheme} set={setTheme}/></div><ChangePass uid={u.uid}/><button className="btn sec" style={{marginTop:12}} onClick={()=>signOut(auth)}><Ic d={P.out} s={16}/> Keluar</button></div></div>}</main>
-    <nav className="bnav">{PG.filter(x=>MAIN.includes(x[0])).map(([k,l,d])=><button key={k} className={pg===k?'on':''} onClick={()=>go(k)}><Ic d={d}/>{l}</button>)}<button className={MAIN.includes(pg)?'':'on'} onClick={()=>setMenu(true)}><Ic d={P.list}/>Menu</button></nav>
-    <Modal open={menu} title="Menu" onClose={()=>setMenu(false)}>{PG.filter(x=>!MAIN.includes(x[0])).map(([k,l,d])=><button key={k} className="nl" style={{color:'var(--tx)'}} onClick={()=>go(k)}><Ic d={d}/>{l}</button>)}</Modal></div>}
+    const NAV=[{k:'home',label:'Beranda',icon:'home',main:true,group:'Utama'},{k:'bim',label:'Bimbingan',icon:'bimbingan',main:true,group:'Kerja skripsi'},{k:'rev',label:'Revisi',icon:'revisi',main:true},{k:'jdw',label:'Jadwal',icon:'jadwal',main:true},{k:'run',label:'Rundown',icon:'rundown'},{k:'dok',label:'Dokumen & Drive',icon:'dokumen'},{k:'bkt',label:'Bukti revisi',icon:'image'},{k:'rin',label:'Ringkasan',icon:'ringkasan'},{k:'cari',label:'Pencarian',icon:'cari',group:'Alat'},{k:'csv',label:'CSV dan Backup',icon:'backup'},{k:'set',label:'Profil & Pengaturan',icon:'pengaturan'}];
+    const page=NAV.some(n=>n.k===pg)?pg:'home',go=k=>navigate(k),late=x=>x.deadline&&x.deadline<todayStr()&&x.status!=='Selesai'?'Terlambat':null,auto=k=>page===k&&action==='baru',done=()=>replaceRoute(page);
+    body=<AppShell nav={NAV} page={page} onNavigate={go} identity={prof.nama} sub={'NIM '+prof.nim} onLogout={()=>signOut(auth)}><PwaBar/>
+      {page==='home'&&<Dash uid={du} prof={prof}/>}
+      {page==='bim'&&<Crud col="bimbingan" uid={du} title="Bimbingan" fields={BIM} titleKey="topik" subKeys={['tanggal','dosen','metode']} filter={{key:'bab',label:'Bab',options:BAB}} autoNew={auto('bim')} onAutoNew={done}/>}
+      {page==='rev'&&<Crud col="revisi" uid={du} title="Revisi" fields={REV} titleKey="catatan" subKeys={['tanggal','bab','deadline','prioritas']} filter={{key:'status',label:'Status',options:ST}} urlKey="buktiUrl" autoNew={auto('rev')} onAutoNew={done}/>}
+      {page==='jdw'&&<Crud col="jadwal" uid={du} title="Jadwal" fields={JDW} titleKey="agenda" subKeys={['tanggal','jam','dosen','lokasi']} filter={{key:'status',label:'Status',options:JDW[6].options}} header={rows=><Cal rows={rows}/>}/>}
+      {page==='run'&&<Crud col="rundown" uid={du} title="Rundown" fields={RUN} titleKey="nama" subKeys={['deadline','bab','prioritas']} sortKey="deadline" filter={{key:'status',label:'Status',options:RUN[6].options}} badge={late}/>}
+      {page==='dok'&&<Crud col="dokumen" uid={du} title="Dokumen & Drive" fields={DOK} titleKey="nama" subKeys={['tanggal','folder','status']} filter={{key:'kategori',label:'Kategori',options:DOK[1].options}} urlKey="url"/>}
+      {page==='bkt'&&<Crud col="fotoRevisi" uid={du} title="Bukti Revisi" fields={BKT} titleKey="nama" subKeys={['tanggal','revisiId']} filter={{key:'jenis',label:'Jenis',options:BKT[1].options}} urlKey="url"/>}
+      {page==='rin'&&<Summary uid={du}/>}{page==='cari'&&<Search uid={du} go={go}/>}{page==='csv'&&<ImportExport uid={du}/>}
+      {page==='set'&&<div><PageHead title="Profil dan Pengaturan"/><div className="card"><b>{prof.nama}</b><p className="mut">NIM {prof.nim}<br/>{prof.prodi} · {prof.fakultas}<br/>{prof.universitas}</p><Badge tone="ok">Disetujui</Badge></div><div className="card"><div className="field"><label>Tema tampilan</label><ThemePick get={getTheme} set={setTheme}/></div><ChangePass uid={u.uid}/></div></div>}
+    </AppShell>}
   return <>{body}<ToastHost/></>}
