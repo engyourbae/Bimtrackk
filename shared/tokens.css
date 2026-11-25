@@ -1,0 +1,63 @@
+/* BIMTRACK design tokens — satu-satunya sumber warna, tipografi, spasi, radius, bayangan, durasi.
+   Dipakai bersama oleh bimtrack-user dan bimtrack-admin. Tema: terang (default), gelap, dan identitas admin. */
+:root{
+  color-scheme:light;
+  /* warna */
+  --bg:#F5F6F2;--surface:#FFFFFF;--surface-2:#EEF1EB;--sunken:#E7EBE4;
+  --primary:#426B59;--primary-hover:#365A49;--on-primary:#FFFFFF;--primary-soft:#E3EAE4;
+  --accent:#C49A58;--accent-text:#8A6428;--accent-soft:#F3E8D3;
+  --tx:#1F2A25;--tx2:#5B665F;--tx3:#66716A;
+  --bd:#DDE3DD;--bd-strong:#C3CCC4;
+  --danger:#B3433D;--danger-soft:#F8E5E3;
+  --warn:#7A561F;--warn-soft:#F3E8D3;
+  --ok:#2F6B4C;--ok-soft:#DDEEE4;
+  --info:#35506B;--info-soft:#E1EAF2;
+  --scrim:rgba(20,30,25,.45);--on-danger:#FFFFFF;--sk-hl:rgba(255,255,255,.6);
+  --logo-p:var(--primary);--logo-p2:#7FA591;--logo-ink:var(--tx);--logo-g:#C49A58;--logo-chk:#FFFFFF;--logo-bg:var(--bg);
+  /* tipografi */
+  --font-display:'Fraunces Variable','Fraunces',Georgia,'Times New Roman',serif;
+  --font-text:'Public Sans Variable','Public Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --fs-xs:.75rem;--fs-sm:.8125rem;--fs-md:.9375rem;--fs-lg:1.0625rem;--fs-xl:1.375rem;--fs-2xl:1.75rem;--fs-3xl:2.25rem;
+  --lh-tight:1.2;--lh-snug:1.4;--lh-body:1.6;
+  /* spasi (ritme 4/8 px) */
+  --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:20px;--s6:24px;--s8:32px;--s10:40px;--s12:48px;--s16:64px;
+  /* radius */
+  --r-sm:8px;--r-md:12px;--r-lg:16px;--r-pill:999px;
+  /* bayangan */
+  --sh1:0 1px 2px rgba(31,42,37,.06),0 1px 1px rgba(31,42,37,.04);
+  --sh2:0 4px 16px rgba(31,42,37,.08),0 1px 3px rgba(31,42,37,.06);
+  --sh3:0 16px 40px rgba(31,42,37,.18),0 2px 6px rgba(31,42,37,.08);
+  /* gerak */
+  --dur-fast:150ms;--dur-base:220ms;--dur-slow:300ms;--ease:cubic-bezier(.2,.7,.2,1);
+  /* tata letak */
+  --tap:44px;--side-w:248px;--side-w-compact:72px;--content-w:1120px;--read-w:68ch;
+  --safe-t:env(safe-area-inset-top,0px);--safe-b:env(safe-area-inset-bottom,0px);--safe-l:env(safe-area-inset-left,0px);--safe-r:env(safe-area-inset-right,0px);
+  --ribbon-h:0px;
+  /* nama lama (dipakai komponen yang belum dirombak) */
+  --sec:var(--primary-soft);--dan:var(--danger);--acc:var(--accent);--onp:var(--on-primary);--side:var(--surface);
+}
+:root[data-theme=dark]{
+  color-scheme:dark;
+  --bg:#141A17;--surface:#1C2420;--surface-2:#232D28;--sunken:#101512;
+  --primary:#8DB8A0;--primary-hover:#A3C7B3;--on-primary:#0F1712;--primary-soft:#27332C;
+  --accent:#D9B176;--accent-text:#D9B176;--accent-soft:#33291A;
+  --tx:#EAF0EB;--tx2:#A3B0A7;--tx3:#8E9C93;
+  --bd:#2D3A33;--bd-strong:#41524A;
+  --danger:#E58A83;--danger-soft:#3A2523;
+  --warn:#D9B176;--warn-soft:#33291A;
+  --ok:#7FD0A2;--ok-soft:#1F3328;
+  --info:#9DB9D4;--info-soft:#1E2A36;
+  --scrim:rgba(0,0,0,.6);--on-danger:#2A0F0D;--sk-hl:rgba(255,255,255,.07);
+  --logo-p2:#4F7562;--logo-g:#D9B176;--logo-chk:#141A17;
+  --sh1:0 1px 2px rgba(0,0,0,.4);--sh2:0 4px 16px rgba(0,0,0,.35);--sh3:0 16px 40px rgba(0,0,0,.55);
+}
+/* identitas admin: aksen biru-tinta agar tidak tertukar dengan aplikasi mahasiswa */
+:root[data-app=admin]{
+  --primary:#35506B;--primary-hover:#2B4259;--primary-soft:#E1EAF2;
+  --logo-p:#35506B;--logo-p2:#7C98B2;
+}
+:root[data-app=admin][data-theme=dark]{
+  --primary:#9DB9D4;--primary-hover:#B4CBE2;--on-primary:#0E1822;--primary-soft:#1E2A36;
+  --logo-p:#9DB9D4;--logo-p2:#4C6782;
+}
+@media(prefers-reduced-motion:reduce){:root{--dur-fast:1ms;--dur-base:1ms;--dur-slow:1ms}}
