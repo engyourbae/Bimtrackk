@@ -1,0 +1,58 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isAdmin() { return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == true; }
+    function me() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+    function isApproved() { return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && me().approved == true; }
+    // UID pemilik data: akun hasil reset sandi memakai dataUid milik akun lama
+    function dataUid() { return me().get('dataUid', request.auth.uid); }
+
+    match /admins/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow write: if false; // dibuat manual lewat Firebase Console
+    }
+    match /users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow create, update: if isAdmin();
+      allow update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mustChangePassword'])
+        && request.resource.data.mustChangePassword == false;
+      allow delete: if false;
+    }
+    // Versi identitas login per NIM (hanya angka versi; get publik, list ditolak)
+    match /nimVersion/{nim} {
+      allow get: if true;
+      allow write: if isAdmin();
+    }
+    match /resetRequests/{id} {
+      allow create: if request.resource.data.keys().hasOnly(['nim','nama','status','createdAt'])
+        && request.resource.data.nim is string && request.resource.data.nim.size() <= 20
+        && request.resource.data.nama is string && request.resource.data.nama.size() <= 100
+        && request.resource.data.status == 'pending' && request.resource.data.createdAt == request.time;
+      allow read, update: if isAdmin();
+    }
+    match /registrationRequests/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.uid == uid && request.resource.data.status == 'pending'
+        && request.resource.data.nim is string && request.resource.data.nama is string;
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+    match /aktivitas/{id} {
+      allow read: if isAdmin();
+      allow create: if isAdmin() && request.resource.data.adminUid == request.auth.uid;
+    }
+    // Data skripsi milik mahasiswa (hanya akun approved, hanya miliknya)
+    match /{col}/{docId} {
+      allow read: if col in ['bimbingan','revisi'] && ((isApproved() && resource.data.ownerUid == dataUid()) || isAdmin());
+      allow create: if col in ['bimbingan','revisi'] && isApproved()
+        && request.resource.data.ownerUid == dataUid() && request.resource.data.id == docId;
+      allow update: if col in ['bimbingan','revisi'] && isApproved()
+        && resource.data.ownerUid == dataUid() && request.resource.data.ownerUid == dataUid();
+      allow delete: if col in ['bimbingan','revisi'] && isApproved() && resource.data.ownerUid == dataUid();
+    }
+  }
+}
