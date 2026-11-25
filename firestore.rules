@@ -47,12 +47,12 @@ service cloud.firestore {
     }
     // Data skripsi milik mahasiswa (hanya akun approved, hanya miliknya)
     match /{col}/{docId} {
-      allow read: if col in ['bimbingan','revisi'] && ((isApproved() && resource.data.ownerUid == dataUid()) || isAdmin());
-      allow create: if col in ['bimbingan','revisi'] && isApproved()
+      allow read: if col in ['bimbingan','revisi','jadwal','rundown','dokumen','fotoRevisi','ringkasan','backupLogs'] && ((isApproved() && resource.data.ownerUid == dataUid()) || isAdmin());
+      allow create: if col in ['bimbingan','revisi','jadwal','rundown','dokumen','fotoRevisi','ringkasan','backupLogs'] && isApproved()
         && request.resource.data.ownerUid == dataUid() && request.resource.data.id == docId;
-      allow update: if col in ['bimbingan','revisi'] && isApproved()
+      allow update: if col in ['bimbingan','revisi','jadwal','rundown','dokumen','fotoRevisi','ringkasan','backupLogs'] && isApproved()
         && resource.data.ownerUid == dataUid() && request.resource.data.ownerUid == dataUid();
-      allow delete: if col in ['bimbingan','revisi'] && isApproved() && resource.data.ownerUid == dataUid();
+      allow delete: if col in ['bimbingan','revisi','jadwal','rundown','dokumen','fotoRevisi','ringkasan','backupLogs'] && isApproved() && resource.data.ownerUid == dataUid();
     }
   }
 }
