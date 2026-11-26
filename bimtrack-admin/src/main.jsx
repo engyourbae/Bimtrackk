@@ -1,6 +1,6 @@
 import {createRoot} from 'react-dom/client';
-import '@fontsource-variable/fraunces';
-import '@fontsource-variable/public-sans';
+import '@fontsource-variable/plus-jakarta-sans';
+import '@fontsource-variable/manrope';
 import './shared/styles.css';
 import {applyTheme} from '@shared/theme';
 import App from './App';
