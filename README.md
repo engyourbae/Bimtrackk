@@ -3,6 +3,12 @@
 Isi: `bimtrack-user/`, `bimtrack-admin/` (React + Vite, Firebase proyek `bimtrack-8ac84`), `firestore.rules`.
 Belum diuji dijalankan (dibuat tanpa akses npm). Jalankan dulu `npm install && npm run dev` di tiap folder.
 
+## Konfigurasi Firebase (.env) — wajib
+Semua konfigurasi database tidak lagi ada di kode. Aplikasi membaca `VITE_FIREBASE_*` lewat `shared/firebase-config.js` dan berhenti dengan pesan jelas bila ada yang kosong.
+- **Lokal:** di `bimtrack-user/` dan `bimtrack-admin/` salin `.env.example` menjadi `.env.local`, isi dari Firebase Console > Project settings > Your apps (user dan admin memakai **App ID berbeda**). `.env.local` sudah di `.gitignore`; jangan di-commit.
+- **Deploy:** GitHub repo > Settings > Secrets and variables > Actions > New repository secret: `FIREBASE_API_KEY`, `FIREBASE_AUTH_DOMAIN`, `FIREBASE_PROJECT_ID`, `FIREBASE_STORAGE_BUCKET` (opsional), `FIREBASE_MESSAGING_SENDER_ID`, `FIREBASE_APP_ID_USER`, `FIREBASE_APP_ID_ADMIN`. Workflow gagal dengan pesan jelas jika ada yang kosong.
+- **Catatan keamanan:** config web Firebase bukan rahasia sungguhan. Nilainya tetap terbaca di hasil build karena dijalankan di peramban. `.env` mencegahnya masuk ke repo dan memudahkan ganti proyek, tetapi pengamanan sebenarnya adalah `firestore.rules` dan pembatasan API key: Google Cloud Console > APIs & Services > Credentials > pilih Browser key > *Website restrictions* > tambahkan `https://USERNAME.github.io/*` (dan `http://localhost:*` untuk dev). Key lama sudah ada di riwayat git; setelah dibatasi, key itu tidak berguna dari domain lain.
+
 ## Langkah wajib
 1. Firebase Console > Authentication: aktifkan **Email/Password**.
 2. Firestore: tempel `firestore.rules` > Publish.
