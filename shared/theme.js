@@ -1,5 +1,5 @@
 // Tema: default TERANG. "Sistem" hanya berlaku jika dipilih sendiri oleh pengguna.
-const K='bimtrack-theme',META={light:'#F5F6F2',dark:'#141A17'};
+const K='bimtrack-theme',META={light:'#E9E7E1',dark:'#0F1B24'};
 const safe=f=>{try{return f()}catch{return null}};
 export const getTheme=()=>{const t=safe(()=>localStorage.getItem(K));return t==='dark'||t==='system'?t:'light'};
 export const resolveTheme=(t=getTheme())=>t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';

@@ -1,35 +1,43 @@
-/* BIMTRACK design tokens — satu-satunya sumber warna, tipografi, spasi, radius, bayangan, durasi.
-   Dipakai bersama oleh bimtrack-user dan bimtrack-admin. Tema: terang (default), gelap, dan identitas admin. */
+/* BIMTRACK design tokens — Academic Slate. Satu-satunya sumber warna, tipografi, spasi, radius, bayangan, tekstur, durasi.
+   Dipakai bersama oleh bimtrack-user, bimtrack-admin, dan landing. Tema: terang (default), gelap, dan identitas admin (aksen ochre).
+   Palet inti: Deep Navy #172B3A · Slate #354B5D · Stone #E9E7E1 · Ivory #F7F7F4 · Sage #4E8874 · White #FFFFFF.
+   Kontras teks sudah diperiksa (WCAG AA ≥ 4.5:1) untuk pasangan yang dipakai; Sage murni (#4E8874) hanya untuk isi/dekorasi, teks memakai --accent-text. */
 :root{
   color-scheme:light;
-  /* warna */
-  --bg:#F5F6F2;--surface:#FFFFFF;--surface-2:#EEF1EB;--sunken:#E7EBE4;
-  --primary:#426B59;--primary-hover:#365A49;--on-primary:#FFFFFF;--primary-soft:#E3EAE4;
-  --accent:#C49A58;--accent-text:#8A6428;--accent-soft:#F3E8D3;
-  --tx:#1F2A25;--tx2:#5B665F;--tx3:#66716A;
-  --bd:#DDE3DD;--bd-strong:#C3CCC4;
-  --danger:#B3433D;--danger-soft:#F8E5E3;
-  --warn:#7A561F;--warn-soft:#F3E8D3;
-  --ok:#2F6B4C;--ok-soft:#DDEEE4;
-  --info:#35506B;--info-soft:#E1EAF2;
-  --panel-bg:var(--primary);--panel-tx:#FFFFFF;--panel-tx2:rgba(255,255,255,.86);--panel-line:rgba(255,255,255,.16);--panel-gold:#EBC688;
-  --scrim:rgba(20,30,25,.45);--on-danger:#FFFFFF;--sk-hl:rgba(255,255,255,.6);
-  --logo-p:var(--primary);--logo-p2:#7FA591;--logo-ink:var(--tx);--logo-g:#C49A58;--logo-chk:#FFFFFF;--logo-bg:var(--bg);
-  /* tipografi */
-  --font-display:'Fraunces Variable','Fraunces',Georgia,'Times New Roman',serif;
-  --font-text:'Public Sans Variable','Public Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
-  --fs-xs:.75rem;--fs-sm:.8125rem;--fs-md:.9375rem;--fs-lg:1.0625rem;--fs-xl:1.375rem;--fs-2xl:1.75rem;--fs-3xl:2.25rem;
+  /* permukaan: latar Stone bertekstur, panel putih/ivory timbul di atasnya */
+  --bg:#E9E7E1;--surface:#FFFFFF;--surface-2:#F7F7F4;--sunken:#DEDBD3;
+  --primary:#172B3A;--primary-hover:#354B5D;--on-primary:#FFFFFF;--primary-soft:#E2E7EB;
+  --accent:#4E8874;--accent-text:#2F6652;--accent-soft:#DDEBE5;
+  --tx:#172B3A;--tx2:#354B5D;--tx3:#52616D;
+  --bd:#D6D3CA;--bd-strong:#AEABA0;
+  --danger:#A83A34;--danger-soft:#F6E3E1;
+  --warn:#7A5316;--warn-soft:#F3E7CF;
+  --ok:#2B6A4F;--ok-soft:#DCEBE3;
+  --info:#2F5370;--info-soft:#E0E9F0;
+  --panel-bg:var(--primary);--panel-tx:#F7F7F4;--panel-tx2:rgba(247,247,244,.86);--panel-line:rgba(247,247,244,.18);--panel-gold:#9BD0BA;
+  --scrim:rgba(23,43,58,.5);--on-danger:#FFFFFF;--sk-hl:rgba(255,255,255,.65);
+  /* logo */
+  --logo-ink:#172B3A;--logo-g:#4E8874;--logo-bg:var(--surface-2);
+  /* tekstur kertas: noise statis, opasitas rendah (tanpa animasi) */
+  --paper:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .09 0 0 0 0 .17 0 0 0 0 .23 .3 0 0 0 -.1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  /* tipografi: Plus Jakarta Sans untuk seluruh aplikasi, Manrope ExtraBold (800) hanya untuk elemen branding */
+  --font-display:'Plus Jakarta Sans Variable','Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --font-text:'Plus Jakarta Sans Variable','Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --font-brand:'Manrope Variable','Manrope','Plus Jakarta Sans Variable',system-ui,sans-serif;--fw-brand:800;
+  /* skala tipografi (rasio ±1.2) */
+  --fs-xs:.75rem;--fs-sm:.8125rem;--fs-md:.9375rem;--fs-lg:1.125rem;--fs-xl:1.375rem;--fs-2xl:1.75rem;--fs-3xl:2.25rem;
   --lh-tight:1.2;--lh-snug:1.4;--lh-body:1.6;
   /* spasi (ritme 4/8 px) */
   --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:20px;--s6:24px;--s8:32px;--s10:40px;--s12:48px;--s16:64px;
-  /* radius */
-  --r-sm:8px;--r-md:12px;--r-lg:16px;--r-pill:999px;
-  /* bayangan */
-  --sh1:0 1px 2px rgba(31,42,37,.06),0 1px 1px rgba(31,42,37,.04);
-  --sh2:0 4px 16px rgba(31,42,37,.08),0 1px 3px rgba(31,42,37,.06);
-  --sh3:0 16px 40px rgba(31,42,37,.18),0 2px 6px rgba(31,42,37,.08);
-  /* gerak */
-  --dur-fast:150ms;--dur-base:220ms;--dur-slow:300ms;--ease:cubic-bezier(.2,.7,.2,1);
+  /* radius (sedang, tidak berlebihan) */
+  --r-sm:8px;--r-md:10px;--r-lg:14px;--r-pill:999px;
+  /* efek timbul: border 1px + bayangan dua lapis lembut + sorot tipis di tepi atas */
+  --hl:inset 0 1px 0 rgba(255,255,255,.85);
+  --sh1:0 1px 1px rgba(23,43,58,.06),0 1px 3px rgba(23,43,58,.07);
+  --sh2:0 1px 2px rgba(23,43,58,.06),0 6px 16px -4px rgba(23,43,58,.13);
+  --sh3:0 2px 4px rgba(23,43,58,.08),0 18px 40px -8px rgba(23,43,58,.30);
+  /* gerak: hanya transform/opacity, 150–300 ms */
+  --dur-fast:150ms;--dur-base:220ms;--dur-slow:300ms;--ease:cubic-bezier(.2,.7,.2,1);--ease-out:cubic-bezier(.16,1,.3,1);
   /* tata letak */
   --tap:44px;--side-w:248px;--side-w-compact:72px;--content-w:1120px;--read-w:68ch;
   --safe-t:env(safe-area-inset-top,0px);--safe-b:env(safe-area-inset-bottom,0px);--safe-l:env(safe-area-inset-left,0px);--safe-r:env(safe-area-inset-right,0px);
@@ -39,27 +47,33 @@
 }
 :root[data-theme=dark]{
   color-scheme:dark;
-  --bg:#141A17;--surface:#1C2420;--surface-2:#232D28;--sunken:#101512;
-  --primary:#8DB8A0;--primary-hover:#A3C7B3;--on-primary:#0F1712;--primary-soft:#27332C;
-  --accent:#D9B176;--accent-text:#D9B176;--accent-soft:#33291A;
-  --tx:#EAF0EB;--tx2:#A3B0A7;--tx3:#8E9C93;
-  --bd:#2D3A33;--bd-strong:#41524A;
-  --danger:#E58A83;--danger-soft:#3A2523;
-  --warn:#D9B176;--warn-soft:#33291A;
-  --ok:#7FD0A2;--ok-soft:#1F3328;
-  --info:#9DB9D4;--info-soft:#1E2A36;
-  --panel-bg:#1E2C25;--panel-tx:#EAF0EB;--panel-tx2:#B9C7BE;--panel-line:rgba(255,255,255,.12);--panel-gold:#D9B176;
-  --scrim:rgba(0,0,0,.6);--on-danger:#2A0F0D;--sk-hl:rgba(255,255,255,.07);
-  --logo-p2:#4F7562;--logo-g:#D9B176;--logo-chk:#141A17;
-  --sh1:0 1px 2px rgba(0,0,0,.4);--sh2:0 4px 16px rgba(0,0,0,.35);--sh3:0 16px 40px rgba(0,0,0,.55);
+  --bg:#0F1B24;--surface:#172B3A;--surface-2:#1C3345;--sunken:#0B141B;
+  --primary:#8CC4AE;--primary-hover:#A5D3C1;--on-primary:#0B1A22;--primary-soft:#21394A;
+  --accent:#6FAE96;--accent-text:#8CC4AE;--accent-soft:#1B3A33;
+  --tx:#F1F1EC;--tx2:#B8C4CC;--tx3:#93A3AF;
+  --bd:#2A4153;--bd-strong:#4A6578;
+  --danger:#F0A19B;--danger-soft:#3A2325;
+  --warn:#E3BF7C;--warn-soft:#352C1A;
+  --ok:#86D2A8;--ok-soft:#1B3328;
+  --info:#A9C6DE;--info-soft:#1F3347;
+  --panel-bg:#1C3345;--panel-tx:#F1F1EC;--panel-tx2:#B8C4CC;--panel-line:rgba(241,241,236,.14);--panel-gold:#8CC4AE;
+  --scrim:rgba(0,0,0,.62);--on-danger:#2A0F0D;--sk-hl:rgba(255,255,255,.07);
+  --logo-ink:#F1F1EC;--logo-g:#6FAE96;--logo-bg:var(--surface);
+  --paper:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .85 0 0 0 0 .92 0 0 0 0 1 .22 0 0 0 -.07'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --hl:inset 0 1px 0 rgba(255,255,255,.06);
+  --sh1:0 1px 2px rgba(0,0,0,.45),0 1px 1px rgba(0,0,0,.3);
+  --sh2:0 1px 2px rgba(0,0,0,.4),0 8px 20px -4px rgba(0,0,0,.5);
+  --sh3:0 2px 4px rgba(0,0,0,.5),0 20px 44px -8px rgba(0,0,0,.7);
 }
-/* identitas admin: aksen biru-tinta agar tidak tertukar dengan aplikasi mahasiswa */
+/* identitas admin: aksen ochre agar tidak tertukar dengan aplikasi mahasiswa (hijau sage) */
 :root[data-app=admin]{
-  --primary:#35506B;--primary-hover:#2B4259;--primary-soft:#E1EAF2;
-  --logo-p:#35506B;--logo-p2:#7C98B2;
+  --primary:#7A5212;--primary-hover:#5E3F0C;--on-primary:#FFFFFF;--primary-soft:#F0E6D2;
+  --accent:#B07F2B;--accent-text:#7A5212;--accent-soft:#F0E6D2;
+  --logo-g:#B07F2B;--panel-gold:#E3BF7C;
 }
 :root[data-app=admin][data-theme=dark]{
-  --primary:#9DB9D4;--primary-hover:#B4CBE2;--on-primary:#0E1822;--primary-soft:#1E2A36;
-  --logo-p:#9DB9D4;--logo-p2:#4C6782;--panel-bg:#1A2631;
+  --primary:#E0B56B;--primary-hover:#EBC888;--on-primary:#1E1405;--primary-soft:#33291A;
+  --accent:#D0A253;--accent-text:#E0B56B;--accent-soft:#33291A;
+  --logo-g:#D0A253;--panel-gold:#E0B56B;
 }
 @media(prefers-reduced-motion:reduce){:root{--dur-fast:1ms;--dur-base:1ms;--dur-slow:1ms}}

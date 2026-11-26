@@ -1,8 +1,8 @@
-import {useEffect,useState} from 'react';
 import {Icon} from './icons';
 import {Logo,LogoMark} from './logo';
+import {fmtWait} from './security';
 
-export const BootScreen=()=><div className="boot" role="status"><LogoMark size={56} title="BIMTRACK"/><span>Memuat…</span></div>;
+export const BootScreen=()=><div className="boot" role="status"><LogoMark size={52}/><span>Memuat…</span></div>;
 
 const MISI=[['bimbingan','Merekam setiap bimbingan dan arahan dosen agar tidak ada yang terlupa.'],['revisi','Mengubah revisi menjadi daftar kerja yang jelas, berprioritas, dan berbukti.'],['lock','Menjaga data mahasiswa tetap pribadi dan aman.'],['wifi','Nyaman di HP, tablet, dan laptop, bahkan saat sinyal lemah.']];
 const ADMIN_PTS=[['inbox','Setujui atau tolak pendaftaran akun mahasiswa.'],['key','Bantu mahasiswa yang lupa kata sandi.'],['audit','Setiap tindakan administrator tercatat di audit log.']];
@@ -15,19 +15,15 @@ const Trail=()=><svg className="trail" viewBox="0 0 420 150" fill="none" aria-hi
 export function AuthLayout({variant='user',title,sub,children,footer,panel=true}){
   const admin=variant==='admin';
   return <div className={'auth-wrap'+(panel?'':' solo')}>
-    {panel&&<aside className="auth-panel"><Logo size={44}/>
+    {panel&&<aside className="auth-panel"><Logo size={44} target/>
       {admin?<div><h2>Panel pengelola</h2><p className="vision">Tempat mengelola akun mahasiswa BIMTRACK dengan aman dan tercatat.</p><ul>{ADMIN_PTS.map(([ic,t])=><li key={ic}><Icon name={ic} size={20}/><span>{t}</span></li>)}</ul></div>
         :<div><h2>Skripsi tertata, bimbingan terarah.</h2><p className="vision">Menjadi teman kerja akademik yang membuat setiap mahasiswa tahu posisi skripsinya dan langkah berikutnya.</p><ul>{MISI.map(([ic,t])=><li key={ic}><Icon name={ic} size={20}/><span>{t}</span></li>)}</ul></div>}
       <Trail/></aside>}
-    <main id="main" className="auth-main"><div className="auth-m-brand"><Logo size={36}/>{!admin&&<p className="tag">Skripsi tertata, bimbingan terarah.</p>}</div>
+    <main id="main" className="auth-main"><div className="auth-m-brand"><Logo size={36} target/>{!admin&&<p className="tag">Skripsi tertata, bimbingan terarah.</p>}</div>
       {admin&&<div style={{marginBottom:12}}><span className="badge info"><Icon name="shield" size={14}/> Khusus administrator</span></div>}
       <h1>{title}</h1>{sub&&<p className="lead">{sub}</p>}{children}{footer&&<div className="auth-foot">{footer}</div>}</main></div>}
 
-/** Batas percobaan beruntun di sisi tampilan (pembatas UI; perlindungan sebenarnya ada di Firebase Auth). */
-export const lockSeconds=n=>n>0&&n%5===0?Math.min(30*2**(n/5-1),900):0;
-export function useAttemptLimit(key='bimtrack-attempts'){
-  const read=()=>{try{return JSON.parse(sessionStorage.getItem(key))||{n:0,until:0}}catch{return{n:0,until:0}}},write=v=>{try{sessionStorage.setItem(key,JSON.stringify(v))}catch{}};
-  const[st,setSt]=useState(read),[now,setNow]=useState(Date.now());
-  useEffect(()=>{if(st.until<=Date.now())return;const t=setInterval(()=>setNow(Date.now()),500);return()=>clearInterval(t)},[st.until]);
-  const secs=Math.max(0,Math.ceil((st.until-now)/1000));
-  return{locked:secs>0,secs,fail(){const n=st.n+1,s=lockSeconds(n),v={n,until:s?Date.now()+s*1000:st.until};write(v);setSt(v);setNow(Date.now())},ok(){write({n:0,until:0});setSt({n:0,until:0})}}}
+/** Pemberitahuan kunci masuk sementara (waktu tunggu makin lama tiap kesalahan). g = hasil useLoginGuard. */
+export const LockNotice=({g})=>g.locked?<div className="lockmsg lock" role="alert"><Icon name="clock" size={18}/><div className="lk-t"><b>Masuk dikunci sementara{g.scope==='device'?' di perangkat ini':''}.</b>
+  <span className="sr">Coba lagi dalam {fmtWait(g.dur)}.</span><span aria-hidden="true">Coba lagi dalam <strong className="num">{fmtWait(g.secs)}</strong>. Setiap kesalahan berikutnya menambah waktu tunggu.</span>
+  <i className="lk-bar" aria-hidden="true"><i style={{transform:`scaleX(${Math.min(1,g.secs/Math.max(1,g.dur))})`}}/></i></div></div>:null;

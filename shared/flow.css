@@ -1,0 +1,73 @@
+/* BIMTRACK flow.css — splash yang mengalir ke layar berikutnya, orientasi pertama kali, pager Masuk | Info & FAQ, pemberitahuan kunci masuk.
+   Hanya opacity + transform. Seluruh efek mati bila pengguna memilih kurangi gerak. */
+
+/* ---------- Splash ---------- */
+.splash{position:fixed;inset:0;z-index:300}
+.splash-bg{position:absolute;inset:0;background-color:var(--bg);background-image:var(--paper);background-size:200px 200px;transition:opacity 420ms var(--ease) 140ms}
+.splash.out{pointer-events:none}.splash.out .splash-bg{opacity:0}
+.splash-logo{position:fixed;left:0;top:0;display:inline-flex;transform-origin:0 0;will-change:transform}
+.splash-logo.go{transition:transform 560ms var(--ease-out)}
+.splash-logo.fade{transition:opacity 320ms var(--ease)}.splash-logo.go.fade{opacity:0}
+.splash .lg-ink{transform-box:fill-box;transform-origin:50% 60%;animation:sp-ink 520ms var(--ease-out) both}
+.splash .lg-g{transform-box:fill-box;animation:sp-g 560ms var(--ease-out) 240ms both}
+.splash .wordmark{animation:sp-w 480ms var(--ease-out) 360ms both}
+.splash-late{position:fixed;left:0;right:0;bottom:calc(40px + var(--safe-b));text-align:center;color:var(--tx2);font-size:var(--fs-sm);animation:fade 400ms var(--ease) both}
+@keyframes sp-ink{from{opacity:0;transform:scale(.88)}}
+@keyframes sp-g{from{opacity:0;transform:translateX(-26px)}}
+@keyframes sp-w{from{opacity:0;transform:translateY(10px)}}
+
+/* ---------- Layar di bawah splash: tersembunyi lalu masuk berurutan saat logo meluncur ---------- */
+html.splashing :is(.auth-main>:not(.auth-m-brand),.auth-panel>:not(:first-child),.onb-body,.onb-act,.content-in,.bottom-nav,.sb-nav,.sb-foot){opacity:0}
+html.flow-go :is(.auth-main>:not(.auth-m-brand),.auth-panel>:not(:first-child),.onb-body,.onb-act,.content-in,.bottom-nav,.sb-nav,.sb-foot){animation:flow-in 460ms var(--ease-out) both;animation-delay:calc(120ms + var(--i,0)*55ms)}
+.auth-main>:nth-child(3),.auth-panel>:nth-child(3),.onb-act{--i:1}.auth-main>:nth-child(4),.sb-foot{--i:2}.auth-main>:nth-child(5){--i:3}.auth-main>:nth-child(6){--i:4}
+@keyframes flow-in{from{opacity:0;transform:translateY(14px)}}
+
+/* ---------- Orientasi pertama kali ---------- */
+.onb{min-height:100dvh;display:flex;flex-direction:column;max-width:520px;margin:0 auto;padding:calc(var(--s5) + var(--safe-t)) var(--s4) calc(var(--s5) + var(--safe-b));outline:none}
+.onb-top{display:flex;align-items:center;justify-content:space-between;min-height:var(--tap)}
+.onb-body{flex:1;display:flex;flex-direction:column;justify-content:center;gap:var(--s5);min-width:0}
+.onb-view{overflow:hidden;margin:0 calc(var(--s4)*-1);padding:var(--s2) var(--s4)}
+.onb-track{display:flex;transition:transform var(--dur-slow) var(--ease-out)}
+.onb-slide{flex:0 0 100%;min-width:0;padding:0 var(--s1);text-align:center}
+.onb-art{width:128px;height:128px;margin:0 auto var(--s6);border-radius:28px;display:grid;place-items:center;background:var(--surface);border:1px solid var(--bd);box-shadow:var(--sh2),var(--hl);color:var(--accent-text)}
+.onb-slide h1{font-size:var(--fs-2xl);margin-bottom:var(--s3)}.onb-slide .lead{color:var(--tx2);font-size:var(--fs-lg);max-width:30em;margin:0 auto}
+.dots{display:flex;justify-content:center;gap:2px}
+.dots button{width:28px;height:28px;border:0;background:none;padding:0;display:grid;place-items:center;border-radius:50%}
+.dots button::before{content:'';width:8px;height:8px;border-radius:4px;background:var(--bd-strong);transition:transform var(--dur-base) var(--ease),background var(--dur-base) var(--ease)}
+.dots button.on::before{background:var(--primary);transform:scaleX(2.6)}
+.onb-act{display:flex;gap:var(--s2);margin-top:var(--s4)}.onb-act .btn.sp{min-width:0}
+
+/* ---------- Pager Masuk | Info & FAQ ---------- */
+.ptabs{position:relative;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;margin-bottom:var(--s5);background:var(--sunken);border-radius:var(--r-md);padding:3px;box-shadow:inset 0 1px 2px rgba(23,43,58,.1)}
+.ptabs button{position:relative;z-index:1;min-height:42px;border:0;background:none;border-radius:calc(var(--r-md) - 3px);font-weight:650;font-size:var(--fs-sm);color:var(--tx2);transition:color var(--dur-fast) var(--ease)}
+.ptabs button[aria-selected=true]{color:var(--tx)}
+.pt-ind{position:absolute;left:3px;top:3px;bottom:3px;width:calc(50% - 3px);border-radius:calc(var(--r-md) - 3px);background:var(--surface);box-shadow:var(--sh1),var(--hl);transition:transform var(--dur-slow) var(--ease-out)}
+.pgs{position:relative;overflow-x:clip;padding:0 4px;margin:0 -4px}
+.pg-panel{transition:opacity var(--dur-slow) var(--ease-out),transform var(--dur-slow) var(--ease-out),visibility 0s}
+.pg-panel.off{position:absolute;left:0;right:0;top:0;opacity:0;visibility:hidden;pointer-events:none;transition:opacity var(--dur-base) var(--ease),transform var(--dur-base) var(--ease),visibility 0s linear var(--dur-base)}
+.pg-panel.off.l{transform:translateX(-28px)}.pg-panel.off.r{transform:translateX(28px)}
+.pg-panel:not(.off){animation:pg-in var(--dur-slow) var(--ease-out) both}
+@keyframes pg-in{from{opacity:0;transform:translateX(18px)}}
+
+/* ---------- Info & FAQ ---------- */
+.info{display:flex;flex-direction:column;gap:var(--s6)}
+.faq-g h3{font-size:var(--fs-md);color:var(--accent-text);text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:var(--s2)}
+.info-steps{list-style:none;margin:0;padding:0;display:grid;gap:var(--s3)}
+.info-steps li{display:flex;gap:var(--s3);align-items:flex-start}.info-steps .n{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--primary);color:var(--on-primary);font-weight:700;font-size:var(--fs-sm);box-shadow:var(--sh1)}
+.info-steps b{display:block;font-size:var(--fs-md)}.info-steps span:not(.n){display:block;color:var(--tx2);font-size:var(--fs-sm)}
+.faq-i{background:var(--surface);border:1px solid var(--bd);border-radius:var(--r-md);margin-bottom:var(--s2);box-shadow:var(--sh1),var(--hl)}
+.faq-i h4{font-size:inherit}
+.faq-i button{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);width:100%;min-height:var(--tap);padding:var(--s2) var(--s4);border:0;background:none;text-align:left;font-weight:650;font-size:var(--fs-md);color:var(--tx);border-radius:inherit}
+.faq-i button .ico{flex:none;color:var(--tx3);transition:transform var(--dur-base) var(--ease)}.faq-i.on button .ico{transform:rotate(180deg)}
+.faq-a{padding:0 var(--s4) var(--s4);color:var(--tx2);font-size:var(--fs-sm);animation:fade var(--dur-base) var(--ease)}.faq-a p{margin:0}.faq-a[hidden]{display:none}
+
+/* ---------- Kunci masuk bertingkat ---------- */
+.lockmsg.note{background:var(--info-soft);color:var(--info)}
+.lockmsg.lock{background:var(--danger-soft);color:var(--danger)}
+.lockmsg.lock .lk-t{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}.lockmsg.lock b{color:var(--danger)}.lockmsg.lock strong{font-weight:800}
+.lk-bar{display:block;height:4px;border-radius:2px;background:color-mix(in srgb,var(--danger) 20%,transparent);margin-top:var(--s2);overflow:hidden}
+.lk-bar>i{display:block;height:100%;width:100%;background:var(--danger);transform-origin:left;transition:transform 260ms linear}
+.keep{margin:calc(var(--s2)*-1) 0 var(--s2)}
+
+@media(min-width:1024px){.onb{max-width:560px;justify-content:center}}
+@media(prefers-reduced-motion:reduce){.splash,.pg-panel:not(.off){animation:none}.onb-track,.pt-ind{transition:none}}

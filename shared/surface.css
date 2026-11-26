@@ -1,0 +1,61 @@
+/* BIMTRACK surface.css — lapisan Academic Slate di atas base.css: tekstur kertas, efek timbul, tipografi, state komponen, gerak.
+   Hanya memakai token dari tokens.css. Animasi hanya transform/opacity (150–300 ms) dan mengikuti prefers-reduced-motion. */
+
+/* ---------- Latar: Stone bertekstur kertas (statis, tanpa animasi) ---------- */
+html{scroll-behavior:smooth;background:var(--bg)}
+body{background-color:var(--bg);background-image:var(--paper);background-size:200px 200px;background-repeat:repeat}
+
+/* ---------- Tipografi: Plus Jakarta Sans; Manrope ExtraBold khusus branding ---------- */
+body{font-feature-settings:'kern' 1;letter-spacing:-.003em}
+h1,h2,h3,h4{font-family:var(--font-display);font-weight:700;letter-spacing:-.018em}
+h1{font-weight:800;letter-spacing:-.025em}h2{font-weight:700}h4{margin:0;font-size:var(--fs-md)}
+.num,.stat b,.big b{font-variant-numeric:lining-nums tabular-nums}
+.eyebrow{letter-spacing:.1em}
+
+/* ---------- Efek timbul: permukaan putih/ivory di atas Stone, border 1px, bayangan dua lapis lembut ---------- */
+.card,.tbl-wrap,.more-i,.pg,.pagehead+.toolbar .in{box-shadow:var(--sh2),var(--hl)}
+.card{background:var(--surface);border-color:var(--bd)}
+.card.clk:hover{box-shadow:var(--sh3),var(--hl)}
+.sheet,.pop,.mbg .sheet{border:1px solid var(--bd);box-shadow:var(--sh3),var(--hl)}
+.topbar{background:color-mix(in srgb,var(--surface) 92%,transparent);box-shadow:var(--sh1);backdrop-filter:none}
+.sidebar{background:var(--surface);box-shadow:var(--sh1),1px 0 0 var(--bd)}
+.bottom-nav{background:var(--surface);box-shadow:0 -1px 0 var(--bd),0 -8px 18px -10px rgba(23,43,58,.22)}
+:root[data-theme=dark] .bottom-nav{box-shadow:0 -1px 0 var(--bd),0 -8px 18px -10px rgba(0,0,0,.6)}
+.nav-item.on,.bn-i.on .bn-ico{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--primary) 14%,transparent)}
+.nav-item.on{position:relative}.nav-item.on::before{content:'';position:absolute;left:-12px;top:10px;bottom:10px;width:3px;border-radius:0 3px 3px 0;background:var(--accent)}
+.badge{box-shadow:inset 0 0 0 1px color-mix(in srgb,currentColor 14%,transparent)}
+.seg{box-shadow:inset 0 1px 2px rgba(23,43,58,.1);background:var(--sunken)}
+.seg button[aria-checked=true]{box-shadow:var(--sh1),var(--hl)}
+
+/* ---------- Tombol: timbul (utama), permukaan (sekunder/garis), datar (ghost) ---------- */
+.btn{box-shadow:0 1px 1px rgba(23,43,58,.2),0 3px 6px -2px rgba(23,43,58,.28),inset 0 1px 0 rgba(255,255,255,.16)}
+.btn.sec,.btn.line{background:var(--surface);border-color:var(--bd-strong);color:var(--tx);box-shadow:var(--sh1),var(--hl)}
+.btn.ghost{box-shadow:none}
+.btn.dan{box-shadow:0 1px 1px rgba(23,43,58,.2),0 3px 6px -2px rgba(168,58,52,.4),inset 0 1px 0 rgba(255,255,255,.16)}
+@media(hover:hover){.btn:not(:disabled):not(:active):not(.ghost):hover{transform:translateY(-1px)}}
+.btn:not(.ghost):active{box-shadow:inset 0 1px 3px rgba(23,43,58,.3)}
+.btn:disabled,.btn[aria-disabled=true]{opacity:.5;box-shadow:none;filter:saturate(.6)}
+/* loading: tambahkan aria-busy="true" pada tombol */
+.btn[aria-busy=true]{pointer-events:none}.btn[aria-busy=true]::before{content:'';width:16px;height:16px;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ---------- Kolom isian: cekung (inset) agar berbeda dari kartu yang timbul ---------- */
+.in{background:var(--surface);border-color:var(--bd-strong);box-shadow:inset 0 1px 2px rgba(23,43,58,.09);transition:box-shadow var(--dur-fast) var(--ease),border-color var(--dur-fast) var(--ease)}
+:root[data-theme=dark] .in{box-shadow:inset 0 1px 2px rgba(0,0,0,.35)}
+@media(hover:hover){.in:not(:disabled):not(:focus):hover{border-color:var(--tx3)}}
+.in:focus,.in:focus-visible{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 24%,transparent)}
+.in[aria-invalid=true]:focus{box-shadow:0 0 0 3px color-mix(in srgb,var(--danger) 26%,transparent)}
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.hint{font-size:var(--fs-xs)}
+
+/* ---------- Logo & branding ---------- */
+.logo-mark{flex:none;display:block}.logo-lockup{gap:.45em}
+.boot{background:transparent}
+html.splashing .boot>*{visibility:hidden}
+
+/* ---------- Efek muncul saat scroll (sekali) ---------- */
+.rv{opacity:0;transform:translateY(12px)}
+.rv.rv{transition:opacity var(--dur-slow) var(--ease-out),transform var(--dur-slow) var(--ease-out)}
+.rv.rv-in{opacity:1;transform:none}
+@media print{.rv{opacity:1!important;transform:none!important}}
+@media(prefers-reduced-motion:reduce){.rv{opacity:1;transform:none}html{scroll-behavior:auto}}

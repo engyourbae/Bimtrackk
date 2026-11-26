@@ -55,7 +55,8 @@ p{margin:0 0 var(--s3)}
 .toolbar .tb-sel{flex:1 1 150px;min-width:0}
 .logo{font-family:var(--font-display);font-weight:700;font-size:1.5rem;color:var(--tx);letter-spacing:-.01em;margin-bottom:var(--s4)}.logo i{font-style:normal;color:var(--accent-text)}
 .logo-lockup{display:inline-flex;align-items:center;gap:.5em}.logo-lockup.stacked{flex-direction:column;gap:var(--s3)}
-.lg-p{fill:var(--logo-p)}.lg-p2{fill:var(--logo-p2)}.lg-spine{stroke:var(--logo-bg)}.lg-ink{stroke:var(--logo-ink)}.lg-g{fill:var(--logo-g)}.lg-chk{stroke:var(--logo-chk)}.wm-a{fill:var(--tx)}.wm-b{fill:var(--accent-text)}
+.lg-ink{fill:var(--logo-ink)}.lg-g{fill:var(--logo-g)}
+.wordmark{display:inline-block;font-family:var(--font-brand);font-weight:var(--fw-brand);letter-spacing:.015em;line-height:1;color:var(--tx);white-space:nowrap}.wordmark b{font-weight:inherit}.wm-b{color:var(--accent-text)}
 
 /* ---------- Formulir ---------- */
 .in{display:block;width:100%;min-height:var(--tap);padding:10px var(--s4);border:1px solid var(--bd-strong);border-radius:var(--r-md);background:var(--surface);color:var(--tx);font-size:1rem;line-height:1.4;appearance:none;-webkit-appearance:none}

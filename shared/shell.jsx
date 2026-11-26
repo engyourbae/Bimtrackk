@@ -4,6 +4,7 @@ import {Logo} from './logo';
 import {Modal} from './ui/core';
 import {ThemePick} from './ui/fields';
 import {getTheme,setTheme} from './theme';
+import {useReveal} from './motion';
 
 /**
  * Kerangka aplikasi.
@@ -14,16 +15,17 @@ import {getTheme,setTheme} from './theme';
 export default function AppShell({nav,page,onNavigate,children,admin,identity,sub,onLogout,topSlot}){
   const[more,setMore]=useState(false),[open,setOpen]=useState(false),mains=nav.filter(n=>n.main).slice(0,4),inMain=mains.some(n=>n.k===page);
   useEffect(()=>{window.scrollTo(0,0)},[page]);
+  useReveal('#main',page);
   useEffect(()=>{if(!open)return;const f=e=>e.key==='Escape'&&setOpen(false);document.addEventListener('keydown',f);return()=>document.removeEventListener('keydown',f)},[open]);
   const go=k=>{setMore(false);setOpen(false);onNavigate(k)},initial=(identity||'?').trim().charAt(0).toUpperCase(),cur=nav.find(n=>n.k===page);
   let lastGroup=null;
   return <div className={'shell'+(admin?' admin':'')}>
     <a className="skip" href="#main" onClick={e=>{e.preventDefault();document.getElementById('main')?.focus()}}>Lewati ke konten</a>
     {admin&&<div className="ribbon" role="status"><b>ADMIN</b><span>· {identity||'administrator'}</span></div>}
-    <div className="topbar"><Logo size={30}/><div className="row">{topSlot}</div></div>
+    <div className="topbar"><Logo size={30} target/><div className="row">{topSlot}</div></div>
     <div className="shell-body">
       <div className="sb-slot"><aside className={'sidebar'+(open?' open':'')} aria-label="Menu utama">
-        <div className="sb-brand"><Logo size={34}/><button type="button" className="ib sb-toggle" onClick={()=>setOpen(o=>!o)} aria-label={open?'Ciutkan menu':'Buka menu'} aria-expanded={open}><Icon name="panel"/></button></div>
+        <div className="sb-brand"><Logo size={34} target/><button type="button" className="ib sb-toggle" onClick={()=>setOpen(o=>!o)} aria-label={open?'Ciutkan menu':'Buka menu'} aria-expanded={open}><Icon name="panel"/></button></div>
         <nav className="sb-nav">{nav.map(n=>{const g=n.group&&n.group!==lastGroup?n.group:null;if(n.group)lastGroup=n.group;
           return <div key={n.k} style={{display:'contents'}}>{g&&<div className="sb-group">{g}</div>}
             <button type="button" className={'nav-item'+(page===n.k?' on':'')} title={n.label} aria-current={page===n.k?'page':undefined} onClick={()=>go(n.k)}><Icon name={n.icon}/><span className="nl-t">{n.label}</span>{!!n.badge&&<span className="nl-b">{n.badge}</span>}</button></div>})}</nav>
