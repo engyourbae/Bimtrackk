@@ -4,3 +4,4 @@ export * from './logo';
 export * from './ui/core';
 export * from './ui/fields';
 export * from './ui/data';
+export * from './auth';

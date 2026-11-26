@@ -21,3 +21,8 @@ export function relDay(s,now=todayStr()){const n=diffDays(s,now);if(isNaN(n))ret
 /** Sel kalender sebuah bulan, minggu mulai Senin. */
 export function monthGrid(y,m){const off=(new Date(y,m,1).getDay()+6)%7,dim=new Date(y,m+1,0).getDate(),total=Math.ceil((off+dim)/7)*7,out=[];
   for(let i=0;i<total;i++){const d=new Date(y,m,1-off+i);out.push({date:toIso(d),day:d.getDate(),inMonth:d.getMonth()===m})}return out}
+/** Waktu relatif dari detik epoch: "baru saja", "5 menit lalu", "3 jam lalu", atau tanggal. */
+export function relTime(sec,nowMs=Date.now()){const d=Math.floor(nowMs/1000-sec);if(!isFinite(d))return '';if(d<60)return 'baru saja';if(d<3600)return `${Math.floor(d/60)} menit lalu`;if(d<86400)return `${Math.floor(d/3600)} jam lalu`;
+  if(d<172800)return 'kemarin';return fmtDate(toIso(new Date(sec*1000)))}
+export const sapaan=(h=new Date().getHours())=>h<11?'Selamat pagi':h<15?'Selamat siang':h<18?'Selamat sore':'Selamat malam';
+export const hariPanjang=(s=todayStr())=>{const d=parseDate(s);return d?`${HARI[d.getDay()]}, ${fmtDate(s,'panjang')}`:''};

@@ -12,6 +12,7 @@
   --warn:#7A561F;--warn-soft:#F3E8D3;
   --ok:#2F6B4C;--ok-soft:#DDEEE4;
   --info:#35506B;--info-soft:#E1EAF2;
+  --panel-bg:var(--primary);--panel-tx:#FFFFFF;--panel-tx2:rgba(255,255,255,.86);--panel-line:rgba(255,255,255,.16);--panel-gold:#EBC688;
   --scrim:rgba(20,30,25,.45);--on-danger:#FFFFFF;--sk-hl:rgba(255,255,255,.6);
   --logo-p:var(--primary);--logo-p2:#7FA591;--logo-ink:var(--tx);--logo-g:#C49A58;--logo-chk:#FFFFFF;--logo-bg:var(--bg);
   /* tipografi */
@@ -47,6 +48,7 @@
   --warn:#D9B176;--warn-soft:#33291A;
   --ok:#7FD0A2;--ok-soft:#1F3328;
   --info:#9DB9D4;--info-soft:#1E2A36;
+  --panel-bg:#1E2C25;--panel-tx:#EAF0EB;--panel-tx2:#B9C7BE;--panel-line:rgba(255,255,255,.12);--panel-gold:#D9B176;
   --scrim:rgba(0,0,0,.6);--on-danger:#2A0F0D;--sk-hl:rgba(255,255,255,.07);
   --logo-p2:#4F7562;--logo-g:#D9B176;--logo-chk:#141A17;
   --sh1:0 1px 2px rgba(0,0,0,.4);--sh2:0 4px 16px rgba(0,0,0,.35);--sh3:0 16px 40px rgba(0,0,0,.55);
@@ -58,6 +60,6 @@
 }
 :root[data-app=admin][data-theme=dark]{
   --primary:#9DB9D4;--primary-hover:#B4CBE2;--on-primary:#0E1822;--primary-soft:#1E2A36;
-  --logo-p:#9DB9D4;--logo-p2:#4C6782;
+  --logo-p:#9DB9D4;--logo-p2:#4C6782;--panel-bg:#1A2631;
 }
 @media(prefers-reduced-motion:reduce){:root{--dur-fast:1ms;--dur-base:1ms;--dur-slow:1ms}}
