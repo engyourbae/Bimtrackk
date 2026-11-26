@@ -32,8 +32,8 @@ jobs:
           cp -r bimtrack-admin/dist site/admin
           # Font landing diambil dari paket fontsource yang sudah terpasang di aplikasi user.
           F=bimtrack-user/node_modules/@fontsource-variable
-          cp "$F/fraunces/files/fraunces-latin-wght-normal.woff2" site/fonts/fraunces.woff2 || echo "::warning::font Fraunces tidak ditemukan, memakai font cadangan"
-          cp "$F/public-sans/files/public-sans-latin-wght-normal.woff2" site/fonts/public-sans.woff2 || echo "::warning::font Public Sans tidak ditemukan, memakai font cadangan"
+          cp "$F/plus-jakarta-sans/files/plus-jakarta-sans-latin-wght-normal.woff2" site/fonts/plus-jakarta-sans.woff2 || echo "::warning::font Plus Jakarta Sans tidak ditemukan, memakai font cadangan"
+          cp "$F/manrope/files/manrope-latin-wght-normal.woff2" site/fonts/manrope.woff2 || echo "::warning::font Manrope tidak ditemukan, memakai font cadangan"
           touch site/.nojekyll
       - uses: actions/upload-pages-artifact@v3
         with:
