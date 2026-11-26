@@ -20,16 +20,21 @@ jobs:
           node-version: 20
       - name: Periksa konfigurasi Firebase (GitHub Secrets)
         env:
-          S1: ${{ secrets.FIREBASE_API_KEY }}
-          S2: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
-          S3: ${{ secrets.FIREBASE_PROJECT_ID }}
-          S4: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
-          S5: ${{ secrets.FIREBASE_APP_ID_USER }}
-          S6: ${{ secrets.FIREBASE_APP_ID_ADMIN }}
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+          FIREBASE_APP_ID_USER: ${{ secrets.FIREBASE_APP_ID_USER }}
+          FIREBASE_APP_ID_ADMIN: ${{ secrets.FIREBASE_APP_ID_ADMIN }}
         run: |
-          for n in S1 S2 S3 S4 S5 S6; do
-            [ -n "${!n}" ] || { echo "::error::Secret Firebase belum lengkap (lihat README, bagian Konfigurasi). Kosong: $n"; exit 1; }
+          miss=""
+          for n in FIREBASE_API_KEY FIREBASE_AUTH_DOMAIN FIREBASE_PROJECT_ID FIREBASE_MESSAGING_SENDER_ID FIREBASE_APP_ID_USER FIREBASE_APP_ID_ADMIN; do
+            [ -n "${!n}" ] || miss="$miss $n"
           done
+          if [ -n "$miss" ]; then
+            echo "::error title=GitHub Secret belum diisi::Buat secret berikut di Settings > Secrets and variables > Actions > Repository secrets (nama harus persis sama):$miss"
+            exit 1
+          fi
       - name: Build kedua aplikasi
         env:
           VITE_FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
