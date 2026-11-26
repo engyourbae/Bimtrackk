@@ -10,7 +10,7 @@ export const BABS=BAB.slice(0,5);
 export const REV_SCORE={[ST[0]]:0,[ST[1]]:.4,[ST[2]]:.75,[ST[3]]:.2,[ST[4]]:1};
 export const RUN_SCORE={'Belum mulai':0,'Berjalan':.5,'Selesai':1};
 const avg=a=>a.reduce((s,x)=>s+x,0)/a.length;
-const openRev=x=>x.status!==ST[4],openRun=x=>x.status!=='Selesai';
+const openRev=x=>x.status!==ST[4]&&!x.archived,openRun=x=>x.status!=='Selesai';
 
 export function calcProgress({bimbingan=[],revisi=[],rundown=[],today}){
   const babs=BABS.map(bab=>{
