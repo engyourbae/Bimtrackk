@@ -3,7 +3,7 @@ import {onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPass
 import {doc,onSnapshot,setDoc,getDoc,addDoc,updateDoc,collection,query,where,serverTimestamp} from 'firebase/firestore';
 import {auth,db} from './firebase';
 import {getTheme,setTheme} from './shared/theme';
-import {ToastHost,toast,Pass,Icon,Badge,ThemePick,PageHead,AuthLayout,BootScreen} from './shared/ui';
+import {ToastHost,toast,Pass,Icon,Badge,ThemePick,PageHead,AuthLayout,BootScreen,Splash,SessionCard,startSessionGuard,markSeen} from './shared/ui';
 import Auth from './Auth';
 import Dash from './Dash';
 import AppShell from '@shared/shell';
@@ -21,10 +21,13 @@ function ChangePass({uid,force}){const[p,setP]=useState(''),[b,setB]=useState(fa
   return <div className="field" style={force?undefined:{marginTop:12}}>{!force&&<label>Ganti kata sandi</label>}<Pass value={p} onChange={setP} placeholder="Kata sandi baru" auto="new-password"/><button className="btn" style={{width:'100%',marginTop:8}} disabled={b} onClick={go}>Simpan</button></div>}
 export default function App(){
   const[u,setU]=useState(undefined),[prof,setProf]=useState(undefined),[req,setReq]=useState(undefined),{page:pg,action,id:rid}=useRoute();
-  useEffect(()=>onAuthStateChanged(auth,x=>{setU(x);setProf(undefined);setReq(undefined)}),[]);
+  useEffect(()=>onAuthStateChanged(auth,x=>{setU(x);if(x)markSeen();setProf(undefined);setReq(undefined)}),[]);
+  // kedaluwarsa sesi (hanya aktif bila dinyalakan di Pengaturan; berlaku per perangkat)
+  useEffect(()=>{if(!u)return;return startSessionGuard('user',{onExpire:()=>signOut(auth),onWarn:()=>toast('Sesi akan berakhir dalam 1 menit karena tidak aktif. Sentuh layar untuk tetap masuk.')})},[u]);
   useEffect(()=>{if(!u)return;const a=onSnapshot(doc(db,'users',u.uid),s=>setProf(s.exists()?s.data():null),()=>setProf(null));const b=onSnapshot(doc(db,'registrationRequests',u.uid),s=>setReq(s.exists()?s.data():null),()=>setReq(null));return()=>{a();b()}},[u]);
   let body;
-  if(u===undefined||(u&&(prof===undefined||req===undefined)))body=<BootScreen/>;
+  const boot=u===undefined||(u&&(prof===undefined||req===undefined));
+  if(boot)body=<BootScreen/>;
   else if(!u)body=<Auth/>;
   else if(!prof?.approved)body=<AuthLayout panel={false} title={req?.status==='rejected'?'Pendaftaran ditolak':req?.status==='approved'?'Akses dinonaktifkan':'Menunggu persetujuan admin'} sub={req?.status==='rejected'?('Alasan: '+(req.reason||'-')):req?'Akun kamu belum dapat membuka data skripsi. Halaman ini akan terbuka otomatis setelah disetujui.':'Memproses pendaftaran…'}><button type="button" className="btn sec block" onClick={()=>signOut(auth)}><Icon name="logout" size={18}/> Keluar</button></AuthLayout>;
   else if(prof.mustChangePassword)body=<AuthLayout panel={false} title="Buat kata sandi baru" sub="Sandi sementara harus diganti dulu sebelum melanjutkan."><ChangePass uid={u.uid} force/></AuthLayout>;
@@ -43,6 +46,6 @@ export default function App(){
       {page==='dok'&&<Crud autoNew={auto('dok')} onAutoNew={done} openId={opn('dok')} onOpenId={done} col="dokumen" uid={du} title="Dokumen & Drive" fields={DOK} titleKey="nama" subKeys={['tanggal','folder','status']} filters={[{key:'kategori',label:'Kategori',options:DOK[1].options},{key:'status',label:'Status',options:DOK[6].options}]} range="tanggal" statusKey="status" tones={DOK_TONE} archivable views={['list','group']} groupKey="kategori" defaults={()=>({tanggal:todayStr(),status:'Draft'})} urlKey="url"/>}
       {page==='bkt'&&<Crud autoNew={auto('bkt')} onAutoNew={done} openId={opn('bkt')} onOpenId={done} col="fotoRevisi" uid={du} title="Bukti Revisi" fields={BKT} titleKey="nama" subKeys={['tanggal','jenis']} filters={[{key:'jenis',label:'Jenis',options:BKT[1].options}]} range="tanggal" archivable views={['gallery','list']} defaults={()=>({tanggal:todayStr()})} urlKey="url"/>}
       {page==='rin'&&<Summary uid={du}/>}{page==='cari'&&<Search uid={du} go={go}/>}{page==='csv'&&<ImportExport uid={du}/>}
-      {page==='set'&&<div><PageHead title="Profil dan Pengaturan"/><div className="card"><b>{prof.nama}</b><p className="mut">NIM {prof.nim}<br/>{prof.prodi} · {prof.fakultas}<br/>{prof.universitas}</p><Badge tone="ok">Disetujui</Badge></div><div className="card"><div className="field"><label>Tema tampilan</label><ThemePick get={getTheme} set={setTheme}/></div><ChangePass uid={u.uid}/></div></div>}
+      {page==='set'&&<div><PageHead title="Profil dan Pengaturan"/><div className="card"><b>{prof.nama}</b><p className="mut">NIM {prof.nim}<br/>{prof.prodi} · {prof.fakultas}<br/>{prof.universitas}</p><Badge tone="ok">Disetujui</Badge></div><div className="card"><div className="field"><label>Tema tampilan</label><ThemePick get={getTheme} set={setTheme}/></div><ChangePass uid={u.uid}/></div><SessionCard app="user"/></div>}
     </AppShell>}
-  return <>{body}<ToastHost/></>}
+  return <>{body}<Splash ready={!boot}/><ToastHost/></>}
