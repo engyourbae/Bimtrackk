@@ -1,58 +1,129 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // ───────────────────────── Fungsi dasar ─────────────────────────
     function signedIn() { return request.auth != null; }
-    function isAdmin() { return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
-      && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == true; }
+
+    // Admin: dokumen admins/{uid} dengan role bertipe boolean true (dibuat manual lewat Firebase Console)
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.get('role', false) == true;
+    }
+    function hasUserDoc() { return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)); }
     function me() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
-    function isApproved() { return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && me().approved == true; }
+    function isApproved() { return hasUserDoc() && me().get('approved', false) == true; }
     // UID pemilik data: akun hasil reset sandi memakai dataUid milik akun lama
     function dataUid() { return me().get('dataUid', request.auth.uid); }
+    // Akun dengan sandi sementara tidak boleh menulis data sebelum sandi diganti
+    function canWriteOwn() { return isApproved() && me().get('mustChangePassword', false) != true; }
 
+    // ───────────────────────── Fungsi bantu validasi ─────────────────────────
+    function isStr(v, max) { return v is string && v.size() > 0 && v.size() <= max; }
+    function changedOnly(keys) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys); }
+    function studentCol(c) { return c in ['bimbingan', 'revisi', 'jadwal', 'rundown', 'dokumen', 'fotoRevisi', 'ringkasan', 'backupLogs']; }
+
+    // ───────────────────────── Admin ─────────────────────────
     match /admins/{uid} {
       allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
-      allow write: if false; // dibuat manual lewat Firebase Console
+      allow write: if false;
     }
+
+    // ───────────────────────── Akun mahasiswa ─────────────────────────
     match /users/{uid} {
       allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
-      allow create, update: if isAdmin();
-      allow update: if signedIn() && request.auth.uid == uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mustChangePassword'])
-        && request.resource.data.mustChangePassword == false;
+      allow create: if isAdmin()
+        && request.resource.data.get('uid', uid) == uid
+        && request.resource.data.get('approved', false) is bool;
+      allow update: if
+        (isAdmin()
+          && request.resource.data.get('uid', uid) == uid
+          && request.resource.data.get('approved', false) is bool)
+        // mahasiswa hanya boleh menandai sandi sementara sudah diganti
+        || (signedIn() && request.auth.uid == uid
+          && changedOnly(['mustChangePassword'])
+          && request.resource.data.mustChangePassword == false);
       allow delete: if false;
     }
-    // Versi identitas login per NIM (hanya angka versi; get publik, list ditolak)
+
+    // Versi identitas login per NIM: get publik (dibutuhkan sebelum login), list ditolak
     match /nimVersion/{nim} {
       allow get: if true;
-      allow write: if isAdmin();
+      allow list: if false;
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly(['v'])
+        && request.resource.data.v is int
+        && request.resource.data.v >= 1 && request.resource.data.v < 100000;
+      allow delete: if false;
     }
+
+    // Permintaan reset sandi: dikirim sebelum login, jadi create terbuka tetapi dibatasi ketat
     match /resetRequests/{id} {
-      allow create: if request.resource.data.keys().hasOnly(['nim','nama','status','createdAt'])
-        && request.resource.data.nim is string && request.resource.data.nim.size() <= 20
-        && request.resource.data.nama is string && request.resource.data.nama.size() <= 100
-        && request.resource.data.status == 'pending' && request.resource.data.createdAt == request.time;
-      allow read, update: if isAdmin();
+      allow create: if request.resource.data.keys().hasOnly(['nim', 'nama', 'status', 'createdAt'])
+        && request.resource.data.keys().hasAll(['nim', 'nama', 'status', 'createdAt'])
+        && isStr(request.resource.data.nim, 20)
+        && isStr(request.resource.data.nama, 100)
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt == request.time;
+      allow read: if isAdmin();
+      allow update: if isAdmin()
+        && changedOnly(['status', 'decidedAt', 'decidedBy'])
+        && request.resource.data.status in ['done', 'rejected'];
+      allow delete: if false;
     }
+
+    // Permintaan pendaftaran: dibuat sekali oleh pemilik akun, diputuskan admin
     match /registrationRequests/{uid} {
       allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
       allow create: if signedIn() && request.auth.uid == uid
-        && request.resource.data.uid == uid && request.resource.data.status == 'pending'
-        && request.resource.data.nim is string && request.resource.data.nama is string;
-      allow update: if isAdmin();
+        && request.resource.data.keys().hasOnly(['uid', 'nim', 'nama', 'prodi', 'fakultas', 'universitas', 'status', 'createdAt'])
+        && request.resource.data.keys().hasAll(['uid', 'nim', 'nama', 'prodi', 'fakultas', 'universitas', 'status', 'createdAt'])
+        && request.resource.data.uid == uid
+        && isStr(request.resource.data.nim, 20)
+        && isStr(request.resource.data.nama, 100)
+        && isStr(request.resource.data.prodi, 100)
+        && isStr(request.resource.data.fakultas, 100)
+        && isStr(request.resource.data.universitas, 120)
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt == request.time;
+      allow update: if isAdmin()
+        && changedOnly(['status', 'decidedAt', 'decidedBy', 'reason'])
+        && request.resource.data.status in ['approved', 'rejected'];
       allow delete: if false;
     }
+
+    // Audit log: hanya admin, hanya tambah (tidak bisa diubah atau dihapus)
     match /aktivitas/{id} {
       allow read: if isAdmin();
-      allow create: if isAdmin() && request.resource.data.adminUid == request.auth.uid;
+      allow create: if isAdmin()
+        && request.resource.data.adminUid == request.auth.uid
+        && isStr(request.resource.data.action, 40)
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
     }
-    // Data skripsi milik mahasiswa (hanya akun approved, hanya miliknya)
+
+    // ───────────────────────── Data skripsi mahasiswa ─────────────────────────
+    // Hanya akun approved, hanya miliknya; admin hanya membaca. Bidang pengenal tidak bisa dipalsukan atau dipindah pemilik.
     match /{col}/{docId} {
-      allow read: if col in ['bimbingan','revisi','jadwal','rundown','dokumen','fotoRevisi','ringkasan','backupLogs'] && ((isApproved() && resource.data.ownerUid == dataUid()) || isAdmin());
-      allow create: if col in ['bimbingan','revisi','jadwal','rundown','dokumen','fotoRevisi','ringkasan','backupLogs'] && isApproved()
-        && request.resource.data.ownerUid == dataUid() && request.resource.data.id == docId;
-      allow update: if col in ['bimbingan','revisi','jadwal','rundown','dokumen','fotoRevisi','ringkasan','backupLogs'] && isApproved()
-        && resource.data.ownerUid == dataUid() && request.resource.data.ownerUid == dataUid();
-      allow delete: if col in ['bimbingan','revisi','jadwal','rundown','dokumen','fotoRevisi','ringkasan','backupLogs'] && isApproved() && resource.data.ownerUid == dataUid();
+      allow read: if studentCol(col)
+        && ((isApproved() && resource.data.ownerUid == dataUid()) || isAdmin());
+      allow create: if studentCol(col) && canWriteOwn()
+        && request.resource.data.ownerUid == dataUid()
+        && request.resource.data.id == docId
+        && request.resource.data.keys().size() <= 80;
+      allow update: if studentCol(col) && canWriteOwn()
+        && resource.data.ownerUid == dataUid()
+        && request.resource.data.ownerUid == dataUid()
+        && request.resource.data.id == docId
+        && request.resource.data.get('createdAt', null) == resource.data.get('createdAt', null)
+        && request.resource.data.keys().size() <= 80;
+      allow delete: if studentCol(col) && isApproved() && resource.data.ownerUid == dataUid();
+    }
+
+    // Subkoleksi dan koleksi lain: ditolak
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
