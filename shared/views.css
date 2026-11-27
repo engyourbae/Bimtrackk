@@ -1,0 +1,51 @@
+/* BIMTRACK views.css — tampilan halaman: menu header, tab bagian, mingguan, bulanan, pengingat, papan, linimasa, perjalanan skripsi. */
+
+/* ---------- pencarian di header (tablet/laptop; di HP ada di bilah atas) ---------- */
+.deskbar{display:none}
+@media(min-width:768px){.deskbar{display:flex;justify-content:flex-end;gap:var(--s2);margin:calc(-1 * var(--s2)) 0 var(--s3)}}
+.subtabs{margin:0 0 var(--s4);overflow-x:auto;max-width:100%}
+
+/* ---------- jadwal: mingguan ---------- */
+.wk-d{display:grid;grid-template-columns:76px minmax(0,1fr);gap:var(--s3);padding:var(--s3) 0;border-top:1px solid var(--bd)}
+.wk-d.today .wk-h b{color:var(--accent-text)}.wk-d.today{background:linear-gradient(90deg,var(--accent-soft),transparent 70%);margin:0 calc(-1 * var(--s2));padding-left:var(--s2);padding-right:var(--s2);border-radius:var(--r-md)}
+.wk-h{display:flex;flex-direction:column}.wk-h b{font-size:var(--fs-sm)}.wk-h span{font-size:var(--fs-xs);color:var(--tx2)}
+.wk-b{display:flex;flex-direction:column;gap:var(--s2);min-width:0}.wk-e{font-size:var(--fs-sm);align-self:center;padding:var(--s2) 0}
+.wk-i{display:flex;align-items:center;gap:var(--s3);width:100%;min-height:var(--tap);padding:var(--s2) var(--s3);text-align:left;border:1px solid var(--bd);border-radius:var(--r-md);background:var(--surface);color:var(--tx)}
+.wk-i b{flex:none;font-variant-numeric:tabular-nums;font-size:var(--fs-sm)}
+.wk-t{flex:1;min-width:0;display:flex;flex-direction:column;overflow-wrap:anywhere}.wk-t small{font-size:var(--fs-xs)}
+.wk-i .badge{flex:none}
+@media(max-width:420px){.wk-d{grid-template-columns:62px minmax(0,1fr);gap:var(--s2)}.wk-i{flex-wrap:wrap}.wk-i .badge{margin-left:auto}}
+
+/* ---------- jadwal: bulanan ---------- */
+.cal-h{margin-bottom:0}.cal-h span{font-size:var(--fs-xs);padding:var(--s1) 0}
+.day{font-variant-numeric:tabular-nums;border:1px solid transparent}
+.day.out{color:var(--tx3)}.day.today{border-color:var(--accent);font-weight:700}
+.day.on{background:var(--primary);color:var(--on-primary);border-color:var(--primary)}.day.on i{background:var(--on-primary)}
+.cal-day{margin-top:var(--s3);padding-top:var(--s3);border-top:1px solid var(--bd);display:flex;flex-direction:column;gap:var(--s2)}
+
+/* ---------- pengingat & ringkasan riwayat ---------- */
+.rem{margin-bottom:var(--s4)}.rem .eyebrow{margin:var(--s2) 0 var(--s2)}.rem-s{color:var(--warn)}
+.rem-i{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px var(--s3);width:100%;padding:var(--s2) var(--s3);margin-bottom:var(--s2);text-align:left;border:1px solid var(--bd);border-radius:var(--r-md);background:var(--surface);color:var(--tx)}
+.rem-w{flex:none;font-size:var(--fs-xs);font-weight:700;color:var(--accent-text)}.rem-t{flex:1;min-width:0;overflow-wrap:anywhere}
+.rem-n{margin-top:var(--s3);padding-top:var(--s3);border-top:1px solid var(--bd)}
+.mini{display:flex;flex-wrap:wrap;gap:var(--s2);margin-bottom:var(--s4)}
+
+/* ---------- rundown: papan & linimasa ---------- */
+.board{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--s4);margin-bottom:var(--s4)}
+@media(min-width:768px){.board{grid-template-columns:repeat(3,minmax(0,1fr));align-items:start}}
+.bcol{background:var(--sunken);border-radius:var(--r-lg);padding:var(--s3);min-width:0;display:flex;flex-direction:column;gap:var(--s3)}
+.bcol-h{display:flex;align-items:center;gap:var(--s2)}.bcol-h h3{flex:1;font-size:var(--fs-md);margin:0}
+.bcol-e{margin:0;padding:var(--s3);font-size:var(--fs-sm);color:var(--tx2);text-align:center}
+.bcol .card{margin:0}
+.tlv{display:grid;grid-template-columns:56px minmax(0,1fr);gap:var(--s3);align-items:start;margin-bottom:var(--s3)}
+.tlv .card{margin:0}.tlv .ctx{min-width:0}
+.tlv-d{display:flex;flex-direction:column;align-items:center;padding:var(--s2) 0;border-radius:var(--r-md);background:var(--surface);border:1px solid var(--bd);text-align:center}
+.tlv-d b{font-size:var(--fs-lg);line-height:1;font-variant-numeric:tabular-nums}.tlv-d span{font-size:var(--fs-xs);color:var(--tx2)}.tlv-d small{font-size:10px;color:var(--tx2);margin-top:2px;padding:0 2px}
+
+/* ---------- perjalanan skripsi ---------- */
+.jr{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--s4);margin:var(--s4) 0}
+@media(min-width:1024px){.jr{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.jr-b{margin:0}.jr-b h2{font-size:var(--fs-lg);margin:0}
+.jr-l{list-style:none;margin:var(--s3) 0;padding:0;display:flex;flex-direction:column;gap:var(--s1);font-size:var(--fs-sm)}
+.jr-late{color:var(--danger);font-weight:600}.jr-a .btn{flex:1 1 auto}
+.jr-b .bar{margin-top:var(--s3)}

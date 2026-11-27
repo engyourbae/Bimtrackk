@@ -11,10 +11,10 @@ export function useExit(open,ms=180){const[mounted,setM]=useState(open),[closing
 
 /* ---------- Toast ---------- */
 let push=()=>{};
-export const toast=(m,t='ok')=>push(m,t);
+export const toast=(m,t='ok',act)=>push(m,t,act);
 export function ToastHost(){const[a,setA]=useState([]);
-  useEffect(()=>{push=(m,t)=>{const id=Math.random();setA(x=>[...x.slice(-2),{id,m,t}]);setTimeout(()=>setA(x=>x.filter(i=>i.id!==id)),t==='err'?5000:3500)};return()=>{push=()=>{}}},[]);
-  return <div className="toasts" role="region" aria-label="Pemberitahuan">{a.map(i=><div key={i.id} role={i.t==='err'?'alert':'status'} className={'toast '+i.t}><Icon name={i.t==='err'?'alert':'check-circle'} size={18}/><span>{i.m}</span></div>)}</div>}
+  useEffect(()=>{push=(m,t,act)=>{const id=Math.random();setA(x=>[...x.slice(-2),{id,m,t,act}]);setTimeout(()=>setA(x=>x.filter(i=>i.id!==id)),t==='err'?5000:act?7000:3500)};return()=>{push=()=>{}}},[]);
+  return <div className="toasts" role="region" aria-label="Pemberitahuan">{a.map(i=><div key={i.id} role={i.t==='err'?'alert':'status'} className={'toast '+i.t}><Icon name={i.t==='err'?'alert':'check-circle'} size={18}/><span className="sp">{i.m}</span>{i.act&&<button type="button" className="toast-act" onClick={()=>{setA(x=>x.filter(z=>z.id!==i.id));i.act.onClick()}}>{i.act.label}</button>}</div>)}</div>}
 
 /* ---------- Popover (dropdown, menu, kalender) ---------- */
 export function Popover({anchor,point,onClose,children,minWidth,align='start'}){
@@ -59,3 +59,15 @@ export function Pass({value,onChange,placeholder='Kata sandi',auto,id,invalid}){
 export function Tooltip({text,children,side='top'}){const[o,setO]=useState(false),id=useId();
   return <span className="tt" onMouseEnter={()=>setO(true)} onMouseLeave={()=>setO(false)} onFocus={()=>setO(true)} onBlur={()=>setO(false)} onKeyDown={e=>e.key==='Escape'&&setO(false)} aria-describedby={o?id:undefined}>{children}{o&&<span role="tooltip" id={id} className={'tt-b '+side}>{text}</span>}</span>}
 export const when=t=>t?.toDate?t.toDate().toLocaleString('id-ID'):'-';
+
+/* ---------- Tombol dengan state loading/berhasil, dialog konfirmasi ---------- */
+/** Tombol: busy = memproses (spinner, tidak bisa diklik); done = berhasil (centang, hijau sesaat). */
+export function Btn({busy,done,className='btn',children,disabled,type='button',...r}){
+  return <button type={type} className={className+(done&&!busy?' is-done':'')} disabled={disabled} aria-busy={busy||undefined} {...r}>{done&&!busy&&<Icon name="check" size={16} strokeWidth={2.5}/>}{children}</button>}
+/** Penanda singkat "berhasil": [aktif, picu]. Aktif selama ms milidetik. */
+export function useFlash(ms=1800){const[on,setOn]=useState(false),t=useRef();useEffect(()=>()=>clearTimeout(t.current),[]);
+  return[on,()=>{setOn(true);clearTimeout(t.current);t.current=setTimeout(()=>setOn(false),ms)}]}
+/** Konfirmasi tindakan yang tidak bisa dibatalkan. danger = tombol merah. */
+export function ConfirmDialog({open,title,text,children,confirmLabel='Hapus',cancelLabel='Batal',danger=true,busy,onConfirm,onCancel}){
+  return <Modal open={open} title={title} onClose={busy?undefined:onCancel} footer={<div className="row"><button type="button" className="btn sec sp" disabled={busy} onClick={onCancel}>{cancelLabel}</button><Btn className={'btn sp'+(danger?' dan':'')} busy={busy} onClick={onConfirm}>{confirmLabel}</Btn></div>}>
+    {text&&<p style={{margin:0}}>{text}</p>}{children}</Modal>}

@@ -1,0 +1,41 @@
+/* BIMTRACK states.css — melengkapi matriks state semua komponen: default · hover · active · focus · disabled · loading · success · error.
+   Hover hanya untuk perangkat berpointer. Gerak hanya transform/opacity. Warna hanya dari tokens.css. */
+
+/* ---------- hover & active (permukaan yang bisa diklik) ---------- */
+@media(hover:hover){
+  .chk:not(.dis):hover .chk-box,.rad:hover .rad-dot{border-color:var(--primary)}
+  .swt:not(.dis):hover .sw-track{filter:brightness(.94)}
+  .selb:not(:disabled):hover{border-color:var(--tx3)}
+  .fchip:hover,.rel-i:hover{background:color-mix(in srgb,var(--primary-soft) 70%,var(--surface));border-color:var(--tx3)}
+  .more-i:hover,.qa-i:hover,.gal-c:hover,.wk-i:hover,.rem-i:hover,.day:not(.on):hover{border-color:var(--tx3);background:var(--surface-2)}
+  .gal-c:hover{box-shadow:var(--sh2)}
+  .lnk:hover{text-decoration-thickness:2px}
+  .toast-act:hover{background:color-mix(in srgb,currentColor 16%,transparent)}
+  .bcol .card.clk:hover{transform:none}
+}
+.fchip:active,.rel-i:active,.more-i:active,.gal-c:active,.wk-i:active,.rem-i:active,.day:active{transform:scale(.98)}
+
+/* ---------- disabled ---------- */
+.in:disabled,.selb:disabled{opacity:.55;cursor:not-allowed;background:var(--surface-2);box-shadow:none}
+.chk.dis,.swt.dis,.rad:has(input:disabled){opacity:.55;cursor:not-allowed}
+.seg button:disabled,.ib:disabled,.nav-item:disabled,.fchip:disabled,.day:disabled{opacity:.45;cursor:not-allowed}
+.btn:disabled{cursor:not-allowed}
+
+/* ---------- loading ---------- */
+.in[aria-busy=true],.selb[aria-busy=true]{opacity:.7;cursor:progress}
+.card[aria-busy=true]{opacity:.7;pointer-events:none}
+.btn.sec[aria-busy=true],.btn.line[aria-busy=true]{color:var(--tx)}
+
+/* ---------- berhasil (success): tombol dan isian ---------- */
+.btn.is-done,.btn.sec.is-done,.btn.line.is-done,.btn.dan.is-done{background:var(--ok);border-color:var(--ok);color:var(--bg)}
+.in.is-ok,.selb.is-ok{border-color:var(--ok)}
+.ok-msg{margin-top:var(--s1);font-size:var(--fs-xs);color:var(--ok)}
+
+/* ---------- galat (error) ---------- */
+.selb[aria-invalid=true],.in[aria-invalid=true]{border-color:var(--danger)}
+.err{color:var(--danger)}
+
+/* ---------- toast dengan aksi ---------- */
+.toast .sp{min-width:0;overflow-wrap:anywhere}
+.toast-act{flex:none;min-height:36px;padding:0 var(--s3);border:1px solid currentColor;border-radius:var(--r-sm);background:transparent;color:inherit;font-weight:700;font-size:var(--fs-sm)}
+.toast-act:active{transform:scale(.96)}

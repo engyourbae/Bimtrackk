@@ -10,6 +10,7 @@ import {useReveal} from './motion';
  * Kerangka aplikasi.
  *  nav: [{k,label,icon,main?,badge?,group?}]  — item main (maks 4) tampil di navigasi bawah HP, sisanya masuk sheet "Lainnya".
  *  HP: bilah atas + navigasi bawah (maks 5 tombol). Tablet: sidebar ikon yang bisa dibuka. Laptop: sidebar penuh.
+ *  short: label pendek untuk navigasi bawah HP. topSlot: tampil di bilah atas (HP) dan di pojok kanan atas konten (tablet/laptop).
  *  admin: menampilkan pita "ADMIN" yang selalu terlihat.
  */
 export default function AppShell({nav,page,onNavigate,children,admin,identity,sub,onLogout,topSlot}){
@@ -32,9 +33,9 @@ export default function AppShell({nav,page,onNavigate,children,admin,identity,su
         <div className="sb-foot">{identity&&<div className="idc"><span className="avatar" aria-hidden="true">{initial}</span><div className="idc-t"><b>{identity}</b>{sub&&<span>{sub}</span>}</div></div>}
           {onLogout&&<button type="button" className="nav-item" title="Keluar" onClick={onLogout}><Icon name="logout"/><span className="nl-t">Keluar</span></button>}</div></aside>
         <div className={'sb-scrim'+(open?' on':'')} onClick={()=>setOpen(false)} aria-hidden="true"/></div>
-      <div className="content"><main id="main" tabIndex={-1} className="content-in"><div className="page" key={page} aria-label={cur?.label}>{children}</div></main></div></div>
+      <div className="content"><main id="main" tabIndex={-1} className="content-in">{topSlot&&<div className="deskbar">{topSlot}</div>}<div className="page" key={page} aria-label={cur?.label}>{children}</div></main></div></div>
     <nav className="bottom-nav" aria-label="Navigasi bawah">{mains.map(n=><button type="button" key={n.k} className={'bn-i'+(page===n.k?' on':'')} aria-current={page===n.k?'page':undefined} onClick={()=>go(n.k)}>
-      <span className="bn-ico"><Icon name={n.icon} size={22}/></span><span className="bn-l">{n.label}</span>{!!n.badge&&<span className="nl-b">{n.badge}</span>}</button>)}
+      <span className="bn-ico"><Icon name={n.icon} size={22}/></span><span className="bn-l">{n.short||n.label}</span>{!!n.badge&&<span className="nl-b">{n.badge}</span>}</button>)}
       <button type="button" className={'bn-i'+(!inMain?' on':'')} aria-haspopup="dialog" onClick={()=>setMore(true)}><span className="bn-ico"><Icon name="grid" size={22}/></span><span className="bn-l">Lainnya</span></button></nav>
     <Modal open={more} title="Lainnya" onClose={()=>setMore(false)}>
       <div className="more-grid">{nav.filter(n=>!mains.includes(n)).map(n=><button type="button" key={n.k} className={'more-i'+(page===n.k?' on':'')} onClick={()=>go(n.k)}><Icon name={n.icon} size={24}/>{n.label}{!!n.badge&&<span className="nl-b" style={{position:'absolute',top:8,right:8}}>{n.badge}</span>}</button>)}</div>
