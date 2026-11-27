@@ -4,7 +4,10 @@ const K='bimtrack-notif',N='bimtrack-notified';
 const ls=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);v===null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch{return null}};
 export const notifSupported=()=>typeof Notification!=='undefined';
 export const notifOn=()=>notifSupported()&&ls(K)==='1'&&Notification.permission==='granted';
-export const setNotifOn=on=>ls(K,on?'1':null);
+export const setNotifOn=on=>{ls(K,on?'1':null);try{dispatchEvent(new Event('bimtrack-notif'))}catch{}};
+/** Status izin yang jujur: 'default' (belum diminta) | 'granted' | 'denied' | 'unsupported'. */
+export const notifPermission=()=>notifSupported()?Notification.permission:'unsupported';
+export const onNotifChange=cb=>{addEventListener('bimtrack-notif',cb);return()=>removeEventListener('bimtrack-notif',cb)};
 /** Minta izin lalu aktifkan. Mengembalikan 'granted' | 'denied' | 'default' | 'unsupported'. */
 export async function enableNotif(){if(!notifSupported())return'unsupported';const p=Notification.permission==='granted'?'granted':await Notification.requestPermission();setNotifOn(p==='granted');return p}
 const seen=()=>{try{return new Set(JSON.parse(ls(N)||'[]'))}catch{return new Set()}};

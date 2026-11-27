@@ -68,6 +68,9 @@ export function Btn({busy,done,className='btn',children,disabled,type='button',.
 export function useFlash(ms=1800){const[on,setOn]=useState(false),t=useRef();useEffect(()=>()=>clearTimeout(t.current),[]);
   return[on,()=>{setOn(true);clearTimeout(t.current);t.current=setTimeout(()=>setOn(false),ms)}]}
 /** Konfirmasi tindakan yang tidak bisa dibatalkan. danger = tombol merah. */
-export function ConfirmDialog({open,title,text,children,confirmLabel='Hapus',cancelLabel='Batal',danger=true,busy,onConfirm,onCancel}){
-  return <Modal open={open} title={title} onClose={busy?undefined:onCancel} footer={<div className="row"><button type="button" className="btn sec sp" disabled={busy} onClick={onCancel}>{cancelLabel}</button><Btn className={'btn sp'+(danger?' dan':'')} busy={busy} onClick={onConfirm}>{confirmLabel}</Btn></div>}>
+export function ConfirmDialog({open,title,text,children,confirmLabel='Hapus',cancelLabel='Batal',danger=true,busy,autoFocusCancel,onConfirm,onCancel}){
+  const cref=useRef();
+  /* fokus awal ke tombol Batal (setelah Modal memfokuskan dialognya) supaya Enter/ketuk tidak sengaja tidak menjalankan aksi */
+  useEffect(()=>{if(!open||!autoFocusCancel)return;const t=setTimeout(()=>cref.current?.focus({preventScroll:true}),60);return()=>clearTimeout(t)},[open,autoFocusCancel]);
+  return <Modal open={open} title={title} onClose={busy?undefined:onCancel} footer={<div className="row"><button type="button" ref={cref} className="btn sec sp" disabled={busy} onClick={onCancel}>{cancelLabel}</button><Btn className={'btn sp'+(danger?' dan':'')} busy={busy} onClick={onConfirm}>{confirmLabel}</Btn></div>}>
     {text&&<p style={{margin:0}}>{text}</p>}{children}</Modal>}

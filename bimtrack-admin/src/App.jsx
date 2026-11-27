@@ -6,7 +6,7 @@ import {setPersistence,browserLocalPersistence,browserSessionPersistence} from '
 import {auth,db,firebaseConfig} from './firebase';
 import {nimEmail} from './shared/nim';
 import {getTheme,setTheme} from './shared/theme';
-import {ToastHost,toast,Pass,Icon,Badge,Modal,Select,ThemePick,when,PageHead,EmptyState,AuthLayout,Field,BootScreen,useLoginGuard,LockNotice,Checkbox,Splash,SessionCard,startSessionGuard,ConfirmDialog,Ic,P} from './shared/ui';
+import {ToastHost,toast,Pass,Icon,Badge,Modal,Select,ThemePick,when,PageHead,EmptyState,AuthLayout,Field,BootScreen,useLoginGuard,LockNotice,Checkbox,Splash,SessionCard,startSessionGuard,ConfirmDialog,Ic,P,AccountCard,InstallCard,PwaNotices} from './shared/ui';
 import AppShell from '@shared/shell';
 import {useRoute,navigate} from '@shared/router';
 const log=(action,extra={})=>addDoc(collection(db,'aktivitas'),{action,adminUid:auth.currentUser.uid,createdAt:serverTimestamp(),...extra});
@@ -74,9 +74,10 @@ function Panel({onReady}){
   const n=s=>reqs.filter(r=>r.status===s).length,page0=NAV.some(x=>x.k===pg)?pg:'home';
   return <AppShell admin nav={NAV} page={page0} onNavigate={k=>navigate(k)} identity={u.email||'Administrator'} sub="Administrator" onLogout={()=>signOut(auth)}>
     <div style={{display:'contents'}} data-page={page0}>
+      <PwaNotices offlineText="Offline: panel admin butuh internet untuk memuat dan menyimpan data."/>
       {page0==='home'&&<div><PageHead title="Dashboard Admin" sub="Ringkasan akun dan aktivitas terbaru"/><div className="grid">{[['Total akun',reqs.length],['Disetujui',n('approved')],['Pending',n('pending')],['Ditolak',n('rejected')]].map(([l,v])=><div className="card stat" key={l}><span className="mut">{l}</span><b>{v}</b></div>)}</div><div className="card"><h2>Data tersimpan</h2><p className="mut" style={{margin:0}}>{Object.keys(cnt).length?Object.entries(cnt).map(([a,b])=>a+': '+b).join(' · '):'Memuat...'}</p></div><div className="card"><h2>Aktivitas terbaru</h2>{act.slice(0,8).map(a=><p key={a.id} style={{margin:'6px 0'}}><b>{a.action}</b> {a.nim||''}<br/><span className="mut" style={{fontSize:'.8rem'}}>{when(a.createdAt)}</span></p>)}{!act.length&&<p className="mut">Belum ada aktivitas.</p>}</div></div>}
       {page0==='req'&&<Requests reqs={reqs}/>}{page0==='usr'&&<Users users={users}/>}{page0==='rst'&&<Resets rst={rst} users={users}/>}
       {page0==='log'&&<div><PageHead title="Audit Log" sub="Riwayat tindakan administrator"/>{act.map(a=><div className="card" key={a.id}><b>{a.action}</b><p className="mut" style={{margin:'4px 0'}}>{a.nim&&'NIM '+a.nim+' · '}admin {a.adminUid?.slice(0,6)}… · {when(a.createdAt)}{a.reason&&' · '+a.reason}</p></div>)}</div>}
-      {page0==='set'&&<div><h1>Pengaturan</h1><div className="card"><div className="fld"><label>Tema</label><ThemePick get={getTheme} set={setTheme}/></div><p className="mut">Firebase project: {firebaseConfig.projectId}<br/>Admin UID: {u.uid}</p></div><SessionCard app="admin"/></div>}
+      {page0==='set'&&<div><h1>Pengaturan</h1><div className="card"><div className="fld"><label>Tema</label><ThemePick get={getTheme} set={setTheme}/></div><p className="mut">Firebase project: {firebaseConfig.projectId}<br/>Admin UID: {u.uid}</p></div><SessionCard app="admin"/><InstallCard/><AccountCard onLogout={()=>signOut(auth)}/></div>}
     </div></AppShell>}
 export default function App(){const[rdy,setRdy]=useState(false);return <><Panel onReady={setRdy}/><Splash ready={rdy}/><ToastHost/></>}

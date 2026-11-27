@@ -5,6 +5,7 @@ import {Modal,Skeleton} from './ui/core';
 import {ThemePick} from './ui/fields';
 import {getTheme,setTheme} from './theme';
 import {useReveal} from './motion';
+import {LogoutButton} from './logout';
 
 /**
  * Kerangka aplikasi.
@@ -13,7 +14,7 @@ import {useReveal} from './motion';
  *  short: label pendek untuk navigasi bawah HP. topSlot: tampil di bilah atas (HP) dan di pojok kanan atas konten (tablet/laptop).
  *  admin: menampilkan pita "ADMIN" yang selalu terlihat.
  */
-export default function AppShell({nav,page,onNavigate,children,admin,identity,sub,onLogout,topSlot,loading}){
+export default function AppShell({nav,page,onNavigate,children,admin,identity,sub,onLogout,logoutOpts,topSlot,loading}){
   const[more,setMore]=useState(false),[open,setOpen]=useState(false),mains=nav.filter(n=>n.main).slice(0,4),inMain=mains.some(n=>n.k===page);
   useEffect(()=>{window.scrollTo(0,0)},[page]);
   useReveal('#main',page);
@@ -31,7 +32,7 @@ export default function AppShell({nav,page,onNavigate,children,admin,identity,su
           return <div key={n.k} style={{display:'contents'}}>{g&&<div className="sb-group">{g}</div>}
             <button type="button" className={'nav-item'+(page===n.k?' on':'')} title={n.label} aria-current={page===n.k?'page':undefined} onClick={()=>go(n.k)}><Icon name={n.icon}/><span className="nl-t">{n.label}</span>{!!n.badge&&<span className="nl-b">{n.badge}</span>}</button></div>})}</nav>
         <div className="sb-foot">{loading?<div className="idc" aria-hidden="true"><Skeleton w={36} h={36} r={18}/><div className="idc-t" style={{flex:1}}><Skeleton w="70%" h={12}/><Skeleton w="50%" h={10}/></div></div>:identity&&<div className="idc"><span className="avatar" aria-hidden="true">{initial}</span><div className="idc-t"><b>{identity}</b>{sub&&<span>{sub}</span>}</div></div>}
-          {onLogout&&<button type="button" className="nav-item" title="Keluar" onClick={onLogout}><Icon name="logout"/><span className="nl-t">Keluar</span></button>}</div></aside>
+          {onLogout&&<LogoutButton onLogout={onLogout} {...logoutOpts} className="nav-item" title="Keluar"><Icon name="logout"/><span className="nl-t">Keluar</span></LogoutButton>}</div></aside>
         <div className={'sb-scrim'+(open?' on':'')} onClick={()=>setOpen(false)} aria-hidden="true"/></div>
       <div className="content"><main id="main" tabIndex={-1} className="content-in" aria-busy={loading||undefined}>{topSlot&&<div className="deskbar">{topSlot}</div>}<div className="page" key={page} aria-label={cur?.label}>{children}</div></main></div></div>
     <nav className="bottom-nav" aria-label="Navigasi bawah">{mains.map(n=><button type="button" key={n.k} className={'bn-i'+(page===n.k?' on':'')} aria-current={page===n.k?'page':undefined} onClick={()=>go(n.k)}>
@@ -40,5 +41,4 @@ export default function AppShell({nav,page,onNavigate,children,admin,identity,su
     <Modal open={more} title="Lainnya" onClose={()=>setMore(false)}>
       <div className="more-grid">{nav.filter(n=>!mains.includes(n)).map(n=><button type="button" key={n.k} className={'more-i'+(page===n.k?' on':'')} onClick={()=>go(n.k)}><Icon name={n.icon} size={24}/>{n.label}{!!n.badge&&<span className="nl-b" style={{position:'absolute',top:8,right:8}}>{n.badge}</span>}</button>)}</div>
       <div className="field" style={{marginTop:20}}><label>Tema tampilan</label><ThemePick get={getTheme} set={setTheme}/></div>
-      {identity&&<div className="idc" style={{marginTop:8}}><span className="avatar" aria-hidden="true">{initial}</span><div className="idc-t"><b>{identity}</b>{sub&&<span>{sub}</span>}</div></div>}
-      {onLogout&&<button type="button" className="btn line block" style={{marginTop:12}} onClick={()=>{setMore(false);onLogout()}}><Icon name="logout" size={18}/> Keluar</button>}</Modal></div>}
+      {identity&&<div className="idc" style={{marginTop:8}}><span className="avatar" aria-hidden="true">{initial}</span><div className="idc-t"><b>{identity}</b>{sub&&<span>{sub}</span>}</div></div>}</Modal></div>}

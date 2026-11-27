@@ -75,3 +75,12 @@
 /* ---------- logo: jarak ikut berskala (fontSize = size) agar splash dan logo tujuan identik ---------- */
 .logo-lockup:not(.stacked){gap:.24em}
 .splash-logo .logo-lockup{gap:.24em}
+
+/* ---------- 4D: Akun/Keluar, status notifikasi, PWA ---------- */
+.acct .danger-zone{margin-top:var(--s4);padding-top:var(--s4);border-top:1px dashed var(--danger)}
+.acct .danger-zone p{margin:0 0 var(--s3);font-size:var(--fs-sm)}
+.banner.info{background:var(--info-soft);color:var(--info);justify-content:space-between}
+.banner.info .btn{flex:none}
+.how{margin:var(--s2) 0 var(--s3);padding-left:1.3em;display:grid;gap:6px;font-size:var(--fs-sm)}
+.notif{display:grid;gap:var(--s3)}
+.notif .row{justify-content:space-between}

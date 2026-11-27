@@ -7,7 +7,8 @@ import {navigate} from '@shared/router';
 import {todayStr,relDay,addDays,HARI,BULAN_S} from '@shared/date';
 import {JDW,RUN,BAB,JDW_TONE,RUN_TONE} from './config';
 import {weekStart,weekDays,byWhen,isPast,reminders} from './schedule';
-import {notifSupported,notifOn,enableNotif,setNotifOn,scheduleNotifs} from './notify';
+import {scheduleNotifs,onNotifChange} from './notify';
+import {NotifControl} from './Device';
 
 const ls=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch{return null}};
 
@@ -24,17 +25,13 @@ function WeekView({rows,onOpen}){
 
 /** Pengingat: jadwal dekat, jadwal yang perlu diperbarui statusnya, dan notifikasi perangkat (opsional). */
 function Reminders({rows,onOpen}){
-  const today=todayStr(),{stale,soon}=useMemo(()=>reminders(rows,today),[rows,today]),[on,setOn]=useState(()=>notifOn()),sup=notifSupported(),[busy,setBusy]=useState(false);
-  const flip=async v=>{if(!v){setNotifOn(false);setOn(false);toast('Notifikasi perangkat dimatikan');return}
-    setBusy(true);const p=await enableNotif();setBusy(false);
-    if(p==='granted'){setOn(true);toast('Notifikasi aktif di perangkat ini')}else toast(p==='unsupported'?'Peramban ini tidak mendukung notifikasi':'Izin notifikasi tidak diberikan. Ubah izin situs di pengaturan peramban untuk mengaktifkannya.','err')};
+  const today=todayStr(),{stale,soon}=useMemo(()=>reminders(rows,today),[rows,today]);
   const L=x=><button type="button" className="rem-i" key={x.id} onClick={()=>onOpen(x.id)}><span className="rem-w">{relDay(x.tanggal,today)}{x.jam?' · '+x.jam:''}</span><span className="rem-t">{x.agenda}</span>{x.dosen&&<small className="mut">{x.dosen}</small>}</button>;
   return <section className="card rem" aria-label="Pengingat"><div className="sec-h"><h2>Pengingat</h2></div>
     {soon.length>0&&<><div className="eyebrow">Hari ini dan besok</div>{soon.map(L)}</>}
     {stale.length>0&&<><div className="eyebrow rem-s">Perlu diperbarui statusnya ({stale.length})</div><p className="mut" style={{fontSize:'var(--fs-sm)',margin:'0 0 6px'}}>Tanggalnya sudah lewat tetapi belum ditandai selesai, dibatalkan, atau dijadwalkan ulang.</p>{stale.slice(0,5).map(L)}{stale.length>5&&<p className="mut" style={{fontSize:'var(--fs-xs)'}}>dan {stale.length-5} lainnya (lihat tab Riwayat).</p>}</>}
     {!soon.length&&!stale.length&&<p className="mut" style={{margin:'0 0 8px'}}>Tidak ada jadwal hari ini atau besok, dan tidak ada yang perlu diperbarui.</p>}
-    <div className="rem-n"><Switch checked={on} disabled={!sup||busy} onChange={flip} label="Notifikasi 30 menit sebelum jadwal"/>
-      <p className="hint mut" style={{margin:'6px 0 0'}}>{sup?'Hanya berlaku di perangkat ini dan hanya muncul selama BIMTRACK terbuka. Pengingat saat aplikasi tertutup membutuhkan server (Cloud Functions, paket berbayar) dan belum diaktifkan.':'Peramban ini tidak mendukung notifikasi.'}</p></div></section>}
+    <NotifControl/></section>}
 
 function HistoryHead({rows}){
   const today=todayStr(),p=rows.filter(x=>isPast(x,today)),n=s=>p.filter(x=>x.status===s).length,stale=reminders(rows,today).stale.length;
@@ -43,7 +40,8 @@ function HistoryHead({rows}){
 function JadwalTab({uid,autoNew,onAutoNew,openId,onOpenId}){
   const rows=useCols(['jadwal'],uid).jadwal,[sub,setSub]=useState(()=>['minggu','bulan','riwayat'].includes(ls('bimtrack-jdw-sub'))?ls('bimtrack-jdw-sub'):'minggu'),today=todayStr(),hist=sub==='riwayat';
   const pick=v=>{setSub(v);ls('bimtrack-jdw-sub',v)},open=id=>navigate('jdw',id);
-  useEffect(()=>{if(!rows)return;return scheduleNotifs(rows)},[rows]);
+  const[nt,setNt]=useState(0);useEffect(()=>onNotifChange(()=>setNt(x=>x+1)),[]);
+  useEffect(()=>{if(!rows)return;return scheduleNotifs(rows)},[rows,nt]);
   return <div>
     {!rows?<div className="stack"><Skeleton h={150} r={16}/><Skeleton h={260} r={16}/></div>:<Reminders rows={rows} onOpen={open}/>}
     <div className="subtabs"><Segmented label="Tampilan jadwal" value={sub} onChange={pick} options={[{value:'minggu',label:'Mingguan',icon:'week'},{value:'bulan',label:'Bulanan',icon:'jadwal'},{value:'riwayat',label:'Riwayat',icon:'history'}]}/></div>

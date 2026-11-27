@@ -27,6 +27,13 @@ Dokumen & Drive, bukti revisi multi-link (validasi link Drive), jadwal (kalender
 ## Belum ada (tahap berikutnya)
 Kalender mingguan, restore backup, riwayat perubahan per revisi, pratinjau gambar Drive di dalam aplikasi, date/time picker custom, sinkronisasi offline selain cache bawaan Firestore, uji otomatis.
 
+## PWA, offline, dan notifikasi (Batch 4D)
+- **Instal:** landing, `/user/`, dan `/admin/` masing-masing punya `manifest.webmanifest` dan `service-worker.js` dengan scope sub-path sendiri. Service worker user/admin diisi daftar precache (termasuk aset ber-hash) dan versi otomatis oleh `shared/pwa-plugin.js` saat `npm run build`; landing diberi versi hash commit oleh `deploy.yml`. Tombol/petunjuk pasang ada di Pengaturan.
+- **Pembaruan:** versi baru menunggu sampai pengguna menekan **Perbarui**.
+- **Keluar:** semua jalur lewat dialog konfirmasi (tombol Keluar ada di Pengaturan > Akun). Di app user ada opsi menghapus data offline perangkat.
+- **Mode offline (opt-in, per perangkat, default mati):** Pengaturan > Mode offline. Cache Firestore di IndexedDB tidak terenkripsi; jangan aktifkan di perangkat bersama. Login pertama di perangkat baru butuh internet.
+- **Notifikasi:** status izin ditampilkan apa adanya (belum diminta/diizinkan/diblokir). Hanya muncul saat BIMTRACK terbuka; notifikasi saat tertutup butuh Cloud Functions + FCM (Blaze) dan belum diaktifkan.
+
 ## Keterbatasan Spark
 - "Cabut akses" hanya mengubah Firestore; akun Auth tidak dinonaktifkan (perlu Admin SDK/Cloud Functions = Blaze).
 - Reset sandi memakai alur admin (di bawah), bukan email otomatis, karena email internal NIM@auth.bimtrack.app bukan email nyata.

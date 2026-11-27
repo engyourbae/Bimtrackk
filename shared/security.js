@@ -40,10 +40,10 @@ export const setSessionPolicy=(app,v)=>{jset(app+':policy',v);jset(app+':active'
 export const resetSessionClock=app=>jset(app+':active',Date.now());
 export const consumeExpiredNotice=app=>{const v=jget(app+':expired',null);if(v)jset(app+':expired',null);return!!v&&Date.now()-v<DAY};
 /** Pantau aktivitas; keluar otomatis bila tidak aktif melebihi batas. Mengembalikan fungsi berhenti. */
-export function startSessionGuard(app,{onExpire,onWarn}={}){
+export function startSessionGuard(app,{onExpire,onWarn,holdOffline}={}){
   let lastTouch=0,warned=false,dead=false;
   const touch=force=>{const t=Date.now();if(!force&&t-lastTouch<10000)return;lastTouch=t;warned=false;if(getSessionPolicy(app).on)jset(app+':active',t)};
-  const check=()=>{if(dead)return;const p=getSessionPolicy(app);if(!p.on)return;const last=jget(app+':active',Date.now()),left=last+p.m*60000-Date.now();
+  const check=()=>{if(dead)return;const p=getSessionPolicy(app);if(!p.on)return;if(holdOffline&&holdOffline())return;const last=jget(app+':active',Date.now()),left=last+p.m*60000-Date.now();
     if(left<=0){dead=true;jset(app+':expired',Date.now());jset(app+':active',null);onExpire&&onExpire();return}
     if(left<=60000&&!warned){warned=true;onWarn&&onWarn(Math.ceil(left/1000))}};
   check();if(!dead)touch(true);
