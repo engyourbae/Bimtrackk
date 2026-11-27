@@ -1,18 +1,17 @@
 import {useState} from 'react';
-import {collection,getDocs,query,where,writeBatch,doc,deleteDoc,setDoc,serverTimestamp} from 'firebase/firestore';
+import {collection,getDocs,query,where,writeBatch,doc,deleteDoc,setDoc,serverTimestamp,Timestamp} from 'firebase/firestore';
 import {db} from './firebase';
 import {useCols} from './useData';
 import {ExportSk} from './PageSkeleton';
-import {COLS} from './config';
+import {COLS,PRA,JUDUL_ST} from './config';
+import {isDriveUrl} from './drive';
+import {safe,esc,save} from './files';
 import {Select,Badge,DatePicker,Icon,DataState,EmptyState,Skeleton,toast} from './shared/ui';
-import {todayStr} from '@shared/date';
-const safe=v=>{v=String(v??'');return /^[=+\-@\t\r]/.test(v)?"'"+v:v};
-const esc=(v,d)=>{v=safe(v);return v.includes('"')||v.includes(d)||/[\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+import {todayStr,parseDate,isTime} from '@shared/date';
 function parse(t){t=t.replace(/^\uFEFF/,'');const f=t.split(/\r?\n/)[0]||'',d=(f.match(/;/g)||[]).length>(f.match(/,/g)||[]).length?';':',',rows=[];let r=[],c='',q=false;
   for(let i=0;i<t.length;i++){const ch=t[i];if(q){if(ch==='"'){if(t[i+1]==='"'){c+='"';i++}else q=false}else c+=ch}else if(ch==='"')q=true;else if(ch===d){r.push(c);c=''}else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&t[i+1]==='\n')i++;r.push(c);c='';if(r.some(x=>x.trim()))rows.push(r);r=[]}else c+=ch}
   r.push(c);if(r.some(x=>x.trim()))rows.push(r);return rows}
 const iso=v=>{v=(v||'').trim();const m=v.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);return m?`${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`:v};
-const save=(name,text,type)=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)};
 const names=Object.keys(COLS).map(k=>COLS[k].t),keyOf=t=>Object.keys(COLS).find(k=>COLS[k].t===t),today=todayStr;
 const load=(c,uid)=>getDocs(query(collection(db,c),where('ownerUid','==',uid))).then(s=>s.docs.map(d=>d.data()));
 export default function ImportExport({uid,embedded}){
@@ -29,14 +28,18 @@ export default function ImportExport({uid,embedded}){
     csv.body.forEach((line,n)=>{const o={};F.forEach(f=>{const i=csv.h.indexOf(map[f.k]);let v=i>=0?(line[i]||'').trim():'';if(f.type==='date')v=iso(v);o[f.k]=v?safe(v):''});
       let why='';for(const f of F){const v=o[f.k];if(f.req&&!v){why=f.label+' kosong';break}if(v&&f.type==='date'&&!/^\d{4}-\d{2}-\d{2}$/.test(v)){why=f.label+' bukan tanggal valid';break}if(v&&f.type==='select'&&!f.options.includes(v)){why=f.label+' tidak dikenali: '+v;break}if(v&&f.drive&&!/^https:\/\/(drive|docs)\.google\.com\//.test(v)){why=f.label+' bukan link Drive';break}}
       if(why)return bad.push({n:n+2,why});const key=F.filter(f=>f.req).map(f=>String(o[f.k]).toLowerCase()).join('|');if(ex.has(key)||seen.has(key))return dup.push({n:n+2});seen.add(key);ok.push(o)});return{ok,bad,dup}};
-  const A=analyze();
+  const A=analyze(),dataTab=tab==='Ekspor'||tab==='Impor';
   const doImport=async()=>{if(!A?.ok.length)return;setBusy(true);const made=[];try{for(let i=0;i<A.ok.length;i+=400){const b=writeBatch(db);A.ok.slice(i,i+400).forEach(o=>{const r=doc(collection(db,k));made.push(r);b.set(r,{...o,id:r.id,ownerUid:uid,createdAt:serverTimestamp(),updatedAt:serverTimestamp()})});await b.commit()}
     toast(`${A.ok.length} baris diimpor`);setCsv(null)}catch(e){await Promise.all(made.map(r=>deleteDoc(r).catch(()=>{})));toast('Impor gagal dan dibatalkan (rollback): '+e.message,'err')}setBusy(false)};
-  const backup=async()=>{setBusy(true);try{const out={app:'BIMTRACK',ownerUid:uid,createdAt:new Date().toISOString()},counts={};for(const c of Object.keys(COLS)){out[c]=await load(c,uid);counts[c]=out[c].length}
-    save(`bimtrack-backup-${today()}.json`,JSON.stringify(out,null,1),'application/json');const id=doc(collection(db,'backupLogs')).id;setDoc(doc(db,'backupLogs',id),{id,ownerUid:uid,tipe:'json',counts,status:'berhasil',createdAt:serverTimestamp(),updatedAt:serverTimestamp()}).catch(()=>{});toast('Backup diunduh')}catch(e){toast(e.message,'err')}setBusy(false)};
-  return <div>{!embedded&&<h1>CSV dan Backup</h1>}<div className="row" style={{marginBottom:12}}>{['Ekspor','Impor','Backup'].map(t=><button key={t} className={'btn '+(tab===t?'':'sec')} onClick={()=>setTab(t)}>{t}</button>)}</div>
-    {tab!=='Backup'&&<div className="fld"><label>Data</label><Select value={col} options={names} onChange={v=>{setCol(v);setSel({});setCsv(null)}}/></div>}
-    {tab!=='Backup'&&<DataState status={live.status} error={live.error} onRetry={live.retry} label="Memuat data" skeleton={<ExportSk/>}>{tab==='Ekspor'&&<><div className="fld"><label>Pemisah kolom</label><Select value={delim} options={['Titik koma (Excel Indonesia)','Koma']} onChange={setDelim}/></div>
+  // Backup: koleksi inti wajib berhasil. Jejak dan judul skripsi bersifat tambahan: bila aturan Firestore terbaru belum terbit, dilewati dan dilaporkan jujur.
+  const backup=async()=>{setBusy(true);try{const out={app:'BIMTRACK',versi:2,ownerUid:uid,createdAt:new Date().toISOString()},counts={},skipped=[];
+    for(const c of Object.keys(COLS)){if(c==='jejak'){try{out[c]=await load(c,uid)}catch{out[c]=[];skipped.push('jejak')}}else out[c]=await load(c,uid);counts[c]=out[c].length}
+    try{out.skripsi=await load('skripsi',uid);counts.skripsi=out.skripsi.length}catch{out.skripsi=[];skipped.push('judul skripsi')}
+    save(`bimtrack-backup-${today()}.json`,JSON.stringify(out,null,1),'application/json');const id=doc(collection(db,'backupLogs')).id;setDoc(doc(db,'backupLogs',id),{id,ownerUid:uid,tipe:'json',counts,status:skipped.length?'sebagian':'berhasil',createdAt:serverTimestamp(),updatedAt:serverTimestamp()}).catch(()=>{});
+    skipped.length?toast('Backup diunduh, tetapi '+skipped.join(' dan ')+' belum bisa dibaca (terbitkan aturan Firestore terbaru).','err'):toast('Backup diunduh')}catch(e){toast(e.message,'err')}setBusy(false)};
+  return <div>{!embedded&&<h1>CSV dan Backup</h1>}<div className="row" style={{marginBottom:12}}>{['Ekspor','Impor','Backup','Pulihkan'].map(t=><button key={t} className={'btn '+(tab===t?'':'sec')} onClick={()=>setTab(t)}>{t}</button>)}</div>
+    {dataTab&&<div className="fld"><label>Data</label><Select value={col} options={names} onChange={v=>{setCol(v);setSel({});setCsv(null)}}/></div>}
+    {dataTab&&<DataState status={live.status} error={live.error} onRetry={live.retry} label="Memuat data" skeleton={<ExportSk/>}>{tab==='Ekspor'&&<><div className="fld"><label>Pemisah kolom</label><Select value={delim} options={['Titik koma (Excel Indonesia)','Koma']} onChange={setDelim}/></div>
       <div className="row" style={{marginBottom:10}}><div style={{flex:1,minWidth:140}}><DatePicker label="Dari tanggal" placeholder="Dari tanggal" value={from} onChange={setFrom}/></div><div style={{flex:1,minWidth:140}}><DatePicker label="Sampai tanggal" placeholder="Sampai tanggal" value={to} onChange={setTo}/></div></div>
       <div className="row" style={{marginBottom:10}}>{F.map(f=><button key={f.k} className={'badge '+(sel[f.k]===false?'':'ok')} style={{border:0,minHeight:32}} onClick={()=>setSel({...sel,[f.k]:sel[f.k]===false})}>{f.label}</button>)}</div>
       <div className="card" style={{overflowX:'auto'}}><p className="mut" style={{margin:'0 0 6px'}}>Pratinjau ({data.length} baris)</p>{data.length?<table style={{fontSize:'.8rem',borderCollapse:'collapse'}}><thead><tr>{cols.map(f=><th key={f.k} style={{textAlign:'left',padding:4}}>{f.label}</th>)}</tr></thead><tbody>{data.slice(0,5).map(r=><tr key={r.id}>{cols.map(f=><td key={f.k} style={{padding:4,maxWidth:160,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{r[f.k]}</td>)}</tr>)}</tbody></table>:<EmptyState compact title={rows.length?'Tidak ada data pada rentang ini':'Belum ada data '+col.toLowerCase()} text={rows.length?'Ubah rentang tanggal untuk melihat data yang bisa diekspor.':'Data yang kamu tambahkan akan bisa diekspor di sini.'}/>}</div>
@@ -45,5 +48,75 @@ export default function ImportExport({uid,embedded}){
       {csv&&<><h2 style={{marginTop:14}}>Pemetaan kolom</h2>{F.map(f=><div className="fld" key={f.k}><label>{f.label}{f.req&&' *'}</label><Select value={map[f.k]} placeholder="(abaikan)" options={['(abaikan)',...csv.h]} onChange={v=>setMap({...map,[f.k]:v==='(abaikan)'?undefined:v})}/></div>)}
         <div className="card"><p style={{margin:0}}><Badge>Valid {A.ok.length}</Badge> <Badge>Duplikat {A.dup.length}</Badge> <span className="badge no">Tidak valid {A.bad.length}</span></p>{A.bad.slice(0,8).map(b=><p key={b.n} className="mut" style={{margin:'4px 0',fontSize:'.85rem'}}>Baris {b.n}: {b.why}</p>)}{A.dup.length>0&&<p className="mut" style={{fontSize:'.85rem'}}>Duplikat dilewati: baris {A.dup.slice(0,10).map(d=>d.n).join(', ')}</p>}</div>
         <button className="btn" style={{width:'100%'}} disabled={busy||!A.ok.length} onClick={doImport}>Impor {A.ok.length} baris (data lama tidak diubah)</button></>}</>}</DataState>}
-    {tab==='Backup'&&<><p className="mut">Mengunduh seluruh data skripsi Anda sebagai JSON. Backup dibuat manual oleh Anda, tidak ada backup otomatis. Tanpa kata sandi atau kredensial.</p><button className="btn" style={{width:'100%'}} disabled={busy} onClick={backup}>Buat backup JSON</button>
-      <h2 style={{marginTop:16}}>Riwayat backup</h2><DataState status={lg.status} error={lg.error} onRetry={lg.retry} compact label="Memuat riwayat backup" skeleton={<Skeleton h={64} r={14}/>} isEmpty={!logs.length} empty={<EmptyState compact title="Belum ada backup" text="Riwayat backup yang kamu buat akan tercatat di sini."/>}>{logs.map(l=><div key={l.id} className="card"><b>{l.createdAt?.toDate?.().toLocaleString('id-ID')||'...'}</b> <Badge>{l.status}</Badge><p className="mut" style={{margin:'4px 0',fontSize:'.8rem'}}>{Object.entries(l.counts||{}).map(([a,b])=>a+': '+b).join(' · ')}</p></div>)}</DataState></>}</div>}
+    {tab==='Pulihkan'&&<Restore uid={uid}/>}
+    {tab==='Backup'&&<><p className="mut">Mengunduh seluruh data skripsimu sebagai JSON: bimbingan, revisi, jadwal, rundown, dokumen, bukti, ringkasan, jejak judul dan outline, serta judul dan tahapan pra-skripsi. Backup dibuat manual olehmu, tidak ada backup otomatis. Tanpa kata sandi atau kredensial. Untuk memulihkan, pakai tab Pulihkan.</p><button className="btn" style={{width:'100%'}} disabled={busy} onClick={backup}>Buat backup JSON</button>
+      <h2 style={{marginTop:16}}>Riwayat backup</h2><DataState status={lg.status} error={lg.error} onRetry={lg.retry} compact label="Memuat riwayat backup" skeleton={<Skeleton h={64} r={14}/>} isEmpty={!logs.length} empty={<EmptyState compact title="Belum ada backup" text="Riwayat backup yang kamu buat akan tercatat di sini."/>}>{logs.map(l=><div key={l.id} className="card"><b>{l.createdAt?.toDate?.().toLocaleString('id-ID')||'...'}</b> <Badge>{l.tipe==='restore'?'pulihkan · ':''}{l.status}</Badge><p className="mut" style={{margin:'4px 0',fontSize:'.8rem'}}>{Object.entries(l.counts||{}).map(([a,b])=>a+': '+b).join(' · ')}</p></div>)}</DataState></>}</div>}
+
+
+// ───────────────────────── Pulihkan dari backup JSON ─────────────────────────
+// Aturan: hanya menambah data yang ID-nya belum ada (tidak menimpa apa pun), pemilik selalu akun ini, setiap baris divalidasi seperti impor CSV.
+const ID=/^[A-Za-z0-9_-]{1,64}$/,TXT=5000,SC=['belum','berjalan','selesai'];
+const tsOf=v=>v&&typeof v==='object'&&Number.isFinite(v.seconds)&&Number.isFinite(v.nanoseconds)&&v.seconds>0&&v.seconds<4102444800?new Timestamp(Math.floor(v.seconds),Math.min(Math.max(Math.floor(v.nanoseconds),0),999999999)):null;
+/** Rapikan satu baris backup untuk koleksi c. Hasil: {o} (siap ditulis) atau {why}. Hanya kolom yang dikenal aplikasi yang dibawa. */
+export function cleanRow(c,raw){
+  if(!raw||typeof raw!=='object'||Array.isArray(raw))return{why:'bukan data yang dikenal'};
+  if(typeof raw.id!=='string'||!ID.test(raw.id))return{why:'ID tidak valid'};
+  const o={id:raw.id};
+  for(const f of COLS[c].f){let v=raw[f.k];if(v==null)v='';if(typeof v!=='string')return{why:f.label+' bukan teks'};v=v.trim();
+    if(v.length>(f.type==='textarea'?TXT:1000))return{why:f.label+' terlalu panjang'};
+    if(f.req&&!v)return{why:f.label+' kosong'};
+    if(v&&f.type==='date'&&!parseDate(v))return{why:f.label+' bukan tanggal valid'};
+    if(v&&f.type==='time'&&!isTime(v))return{why:f.label+' bukan jam valid'};
+    if(v&&f.type==='select'&&!f.options.includes(v))return{why:f.label+' tidak dikenali: '+v.slice(0,30)};
+    if(v&&f.drive&&!isDriveUrl(v))return{why:f.label+' bukan link Drive'};
+    o[f.k]=v}
+  if(raw.archived===true)o.archived=true;
+  if(Array.isArray(raw.riwayat)){const h=raw.riwayat.slice(0,50).filter(x=>x&&typeof x.s==='string'&&x.s.length<=60&&Number.isFinite(x.t)).map(x=>({s:x.s,t:x.t}));if(h.length)o.riwayat=h}
+  return{o}}
+/** Rapikan dokumen judul skripsi + tahapan pra-skripsi. */
+export function cleanSkripsi(raw){
+  if(!raw||typeof raw!=='object'||Array.isArray(raw))return{why:'bukan data yang dikenal'};
+  const o={},j=typeof raw.judul==='string'?raw.judul.trim():'';
+  if(j.length>300)return{why:'judul lebih dari 300 karakter'};if(j)o.judul=j;
+  if(raw.judulStatus!==undefined){if(!JUDUL_ST.includes(raw.judulStatus))return{why:'status judul tidak dikenali'};o.judulStatus=raw.judulStatus}
+  for(const p of PRA){const st=raw['st_'+p.k],tg=raw['tg_'+p.k];
+    if(st!==undefined){if(!SC.includes(st))return{why:'status tahapan tidak dikenali'};o['st_'+p.k]=st}
+    if(tg!==undefined){if(typeof tg!=='string'||tg.length>10||(tg&&!parseDate(tg)))return{why:'tanggal tahapan tidak valid'};o['tg_'+p.k]=tg}}
+  return Object.keys(o).length?{o}:{why:'kosong'}}
+function Restore({uid}){
+  const[plan,setPlan]=useState(null),[busy,setBusy]=useState(false),[name,setName]=useState('');
+  const pick=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;setPlan(null);setName(f.name);
+    if(f.size>20*1024*1024)return toast('Berkas terlalu besar (maks 20 MB)','err');
+    let j;try{j=JSON.parse(await f.text())}catch{return toast('Berkas bukan JSON yang valid','err')}
+    if(!j||j.app!=='BIMTRACK')return toast('Ini bukan berkas backup BIMTRACK','err');
+    setBusy(true);const cols={};
+    try{for(const c of Object.keys(COLS)){const arr=j[c];if(arr===undefined)continue;if(!Array.isArray(arr)){cols[c]={err:'format salah'};continue}
+      let have;try{have=new Set((await load(c,uid)).map(x=>x.id))}catch{cols[c]={err:'tidak bisa dibaca dari server (periksa koneksi atau aturan Firestore)'};continue}
+      const seen=new Set(),r={ok:[],bad:[],dup:0};
+      arr.forEach((raw,n)=>{const z=cleanRow(c,raw);if(!z.o)return r.bad.push({n:n+1,why:z.why});if(have.has(z.o.id)||seen.has(z.o.id))return r.dup++;seen.add(z.o.id);r.ok.push({o:z.o,ts:tsOf(raw.createdAt)})});
+      cols[c]=r}
+      let skr=null;const sr=Array.isArray(j.skripsi)?j.skripsi[0]:null;
+      if(sr){let have;try{have=(await load('skripsi',uid)).length>0}catch{skr={err:'tidak bisa dibaca dari server'}}
+        if(!skr){if(have)skr={dup:true};else{const z=cleanSkripsi(sr);skr=z.o?{o:z.o,ts:tsOf(sr.createdAt)}:{bad:z.why}}}}
+      setPlan({cols,skr})}catch(er){toast(er.message,'err')}setBusy(false)};
+  const total=plan?Object.values(plan.cols).reduce((n,c)=>n+(c.ok?.length||0),0)+(plan.skr?.o?1:0):0;
+  const run=async()=>{if(!plan||!total)return;setBusy(true);const made=[],counts={};
+    try{const jobs=[];Object.entries(plan.cols).forEach(([c,r])=>(r.ok||[]).forEach(z=>jobs.push([c,z])));
+      for(let i=0;i<jobs.length;i+=400){const b=writeBatch(db);jobs.slice(i,i+400).forEach(([c,z])=>{const r=doc(db,c,z.o.id);made.push(r);counts[c]=(counts[c]||0)+1;
+        b.set(r,{...z.o,ownerUid:uid,createdAt:z.ts||serverTimestamp(),updatedAt:serverTimestamp()})});await b.commit()}}
+    catch(e){await Promise.all(made.map(r=>deleteDoc(r).catch(()=>{})));setBusy(false);return toast('Pemulihan gagal dan dibatalkan (rollback): '+e.message,'err')}
+    // judul skripsi ditulis terakhir: dokumen ini tidak bisa dihapus oleh aturan Firestore, jadi tidak boleh ikut rollback
+    let skrOk=false;
+    if(plan.skr?.o){try{await setDoc(doc(db,'skripsi',uid),{...plan.skr.o,id:uid,ownerUid:uid,createdAt:plan.skr.ts||serverTimestamp(),updatedAt:serverTimestamp()});counts.skripsi=1;skrOk=true}catch(e){toast('Data lain terpulihkan, tetapi judul skripsi gagal: '+e.message,'err')}}
+    const id=doc(collection(db,'backupLogs')).id;setDoc(doc(db,'backupLogs',id),{id,ownerUid:uid,tipe:'restore',counts,status:'berhasil',createdAt:serverTimestamp(),updatedAt:serverTimestamp()}).catch(()=>{});
+    toast(`${made.length+(skrOk?1:0)} data dipulihkan`);setPlan(null);setName('');setBusy(false)};
+  const label=c=>c==='skripsi'?'Judul skripsi':COLS[c].t;
+  return <div><p className="mut">Pulihkan dari berkas backup JSON buatan BIMTRACK. Hanya <b>menambah</b> data yang belum ada di akunmu; data dengan ID yang sama dilewati dan tidak pernah ditimpa. Semua data dipulihkan ke akun ini.</p>
+    <label className="btn sec block" style={{cursor:'pointer'}}><Icon name="upload" size={18}/> Pilih berkas backup (.json)<input type="file" accept=".json,application/json" className="sr" onChange={pick} disabled={busy}/></label>
+    {busy&&!plan&&<div className="stack" role="status" aria-busy="true" aria-label="Memeriksa berkas backup" style={{marginTop:12}}><Skeleton h={96} r={14}/></div>}
+    {plan&&<><h2 style={{marginTop:14}}>Hasil pemeriksaan</h2><p className="mut" style={{fontSize:'var(--fs-sm)',margin:'0 0 8px',overflowWrap:'anywhere'}}>{name}</p>
+      {!Object.keys(plan.cols).length&&!plan.skr?<EmptyState compact title="Tidak ada data di berkas ini" text="Berkas ini tidak berisi koleksi yang dikenal BIMTRACK."/>:<>
+      {Object.entries(plan.cols).map(([c,r])=><div className="card" key={c}><div className="row"><b className="sp">{label(c)}</b>{r.err?<span className="badge no">Dilewati</span>:<><Badge tone="ok">Baru {r.ok.length}</Badge><Badge>Sudah ada {r.dup}</Badge>{r.bad.length>0&&<span className="badge no">Tidak valid {r.bad.length}</span>}</>}</div>
+        {r.err&&<p className="mut" style={{margin:'4px 0 0',fontSize:'.85rem'}}>{r.err}</p>}{(r.bad||[]).slice(0,4).map(b=><p key={b.n} className="mut" style={{margin:'4px 0 0',fontSize:'.85rem'}}>Data ke-{b.n}: {b.why}</p>)}</div>)}
+      {plan.skr&&<div className="card"><div className="row"><b className="sp">Judul skripsi dan tahapan</b>{plan.skr.o?<Badge tone="ok">Akan dipulihkan</Badge>:plan.skr.dup?<Badge>Sudah ada, tidak ditimpa</Badge>:<span className="badge no">Dilewati</span>}</div>{(plan.skr.err||plan.skr.bad)&&<p className="mut" style={{margin:'4px 0 0',fontSize:'.85rem'}}>{plan.skr.err||plan.skr.bad}</p>}</div>}
+      <button type="button" className="btn" style={{width:'100%'}} disabled={busy||!total} onClick={run}>{total?`Pulihkan ${total} data (data lama tidak diubah)`:'Tidak ada data baru untuk dipulihkan'}</button></>}</>}</div>}

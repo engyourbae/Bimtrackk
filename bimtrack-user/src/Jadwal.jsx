@@ -4,11 +4,13 @@ import Crud from './Crud';
 import Cal from './Cal';
 import {PageHead,Segmented,Badge,Icon,Switch,Skeleton,DataState,toast} from './shared/ui';
 import {navigate} from '@shared/router';
-import {todayStr,relDay,addDays,HARI,BULAN_S} from '@shared/date';
+import {todayStr,relDay,addDays,isTime,HARI,BULAN_S} from '@shared/date';
 import {JDW,RUN,BAB,JDW_TONE,RUN_TONE} from './config';
 import {weekStart,weekDays,byWhen,isPast,reminders} from './schedule';
 import {scheduleNotifs,onNotifChange} from './notify';
 import {NotifControl} from './Device';
+import {buildIcs,exportable} from './ics';
+import {save} from './files';
 
 const ls=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch{return null}};
 
@@ -23,6 +25,16 @@ function WeekView({rows,onOpen}){
     {days.map(d=>{const it=rows.filter(r=>r.tanggal===d).sort(byWhen),dt=new Date(+d.slice(0,4),+d.slice(5,7)-1,+d.slice(8));
       return <div key={d} className={'wk-d'+(d===today?' today':'')}><div className="wk-h"><b>{HARI[dt.getDay()]}</b><span>{+d.slice(8)} {BULAN_S[+d.slice(5,7)-1]}</span></div><div className="wk-b">{it.length?it.map(x=><Item key={x.id} x={x} onOpen={onOpen}/>):<span className="mut wk-e">Tidak ada jadwal</span>}</div></div>})}</div>}
 
+/** Unduh berkas .ics: pengingat GRATIS yang tetap bunyi saat BIMTRACK tertutup (alarm dipegang aplikasi kalender di HP). */
+function addToCal(list){if(!list.length)return toast('Tidak ada jadwal mendatang untuk ditambahkan','err');
+  save('bimtrack-jadwal-'+todayStr()+'.ics',buildIcs(list),'text/calendar;charset=utf-8');
+  toast(list.length+' jadwal diunduh sebagai berkas kalender. Buka berkasnya untuk menambahkan ke kalender HP.')}
+function CalBtn({rows}){
+  const list=exportable(rows,todayStr()),timed=list.filter(x=>isTime(x.jam)).length;
+  return <div className="rem-n"><div className="row"><b className="sp">Kalender HP</b></div>
+    <p className="mut" style={{fontSize:'var(--fs-sm)',margin:'4px 0 8px'}}>{list.length?`${list.length} jadwal mendatang${timed?`, ${timed} di antaranya dengan alarm 30 menit sebelum mulai`:''}. Jadwal tanpa jam menjadi acara seharian tanpa alarm.`:'Belum ada jadwal mendatang yang bisa ditambahkan.'} Alarm tetap bunyi walau BIMTRACK tertutup.</p>
+    <button type="button" className="btn sec block" disabled={!list.length} onClick={()=>addToCal(list)}><Icon name="jadwal" size={18}/> Tambahkan ke kalender HP</button></div>}
+
 /** Pengingat: jadwal dekat, jadwal yang perlu diperbarui statusnya, dan notifikasi perangkat (opsional). */
 function Reminders({rows,onOpen}){
   const today=todayStr(),{stale,soon}=useMemo(()=>reminders(rows,today),[rows,today]);
@@ -31,7 +43,7 @@ function Reminders({rows,onOpen}){
     {soon.length>0&&<><div className="eyebrow">Hari ini dan besok</div>{soon.map(L)}</>}
     {stale.length>0&&<><div className="eyebrow rem-s">Perlu diperbarui statusnya ({stale.length})</div><p className="mut" style={{fontSize:'var(--fs-sm)',margin:'0 0 6px'}}>Tanggalnya sudah lewat tetapi belum ditandai selesai, dibatalkan, atau dijadwalkan ulang.</p>{stale.slice(0,5).map(L)}{stale.length>5&&<p className="mut" style={{fontSize:'var(--fs-xs)'}}>dan {stale.length-5} lainnya (lihat tab Riwayat).</p>}</>}
     {!soon.length&&!stale.length&&<p className="mut" style={{margin:'0 0 8px'}}>Tidak ada jadwal hari ini atau besok, dan tidak ada yang perlu diperbarui.</p>}
-    <NotifControl/></section>}
+    <CalBtn rows={rows}/><NotifControl/></section>}
 
 function HistoryHead({rows}){
   const today=todayStr(),p=rows.filter(x=>isPast(x,today)),n=s=>p.filter(x=>x.status===s).length,stale=reminders(rows,today).stale.length;
@@ -49,6 +61,7 @@ function JadwalTab({uid,autoNew,onAutoNew,openId,onOpenId}){
     <Crud embedded col="jadwal" uid={uid} title="Jadwal" listTitle={hist?'Riwayat pertemuan':'Pertemuan mendatang'} fields={JDW} titleKey="agenda" subKeys={['tanggal','jam','dosen','lokasi']} statusKey="status" tones={JDW_TONE}
       filters={[{key:'status',label:'Status',options:JDW[6].options},{key:'dosen',label:'Dosen',options:'data'}]} range="tanggal"
       scope={x=>hist===isPast(x,today)} scopeKey={(hist?'past':'up')+today} descDefault={hist} sortLabels={hist?['Terbaru','Terlama']:['Terjauh','Terdekat']} defaults={()=>({status:'Direncanakan'})}
+      actions={[{label:'Tambahkan ke kalender HP',icon:'jadwal',show:x=>exportable([x],today).length>0,onClick:x=>addToCal([x])}]}
       autoNew={autoNew} onAutoNew={onAutoNew} openId={openId} onOpenId={onOpenId}/></div>}
 
 function RundownTab({uid,autoNew,onAutoNew,openId,onOpenId,late}){

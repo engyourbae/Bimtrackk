@@ -6,6 +6,7 @@ import {Modal,Select,Badge,Icon,DataState,EmptyState,toast} from './shared/ui';
 import {SkripsiSk} from './PageSkeleton';
 import {PRA,PRA_ST,PRA_TONE,JUDUL_ST,JUDUL_TONE} from './config';
 import {todayStr,fmtDate} from '@shared/date';
+import {navigate} from '@shared/router';
 const saved=()=>typeof navigator!=='undefined'&&navigator.onLine===false?'Tersimpan di perangkat. Akan disinkronkan saat online.':'Tersimpan';
 /** Judul skripsi + tahapan pra-skripsi. Satu dokumen `skripsi/{uid}` (uid = pemilik data). Tidak ikut rumus progres Bab I–V.
  *  Punya keadaan memuat/galat sendiri, jadi bila aturan Firestore belum diterbitkan, bagian lain halaman tetap berfungsi. */
@@ -21,7 +22,8 @@ export default function Skripsi({uid}){
     <div className="stack">
       <section className="card" aria-label="Judul skripsi"><div className="sec-h"><h2>Judul skripsi</h2>{row?.judul&&<button type="button" className="btn ghost sm" onClick={edit}><Icon name="pencil" size={16}/> Ubah</button>}</div>
         {row?.judul?<><p className="jdl">{row.judul}</p><Badge tone={JUDUL_TONE[row.judulStatus]||'neutral'}>{row.judulStatus||'Draf'}</Badge></>
-          :<EmptyState compact title="Belum ada judul" text="Catat judul skripsimu di sini, termasuk status pengajuannya ke prodi." action={<button type="button" className="btn" onClick={edit}><Icon name="plus" size={18}/> Isi judul</button>}/>}</section>
+          :<EmptyState compact title="Belum ada judul" text="Catat judul skripsimu di sini, termasuk status pengajuannya ke prodi." action={<button type="button" className="btn" onClick={edit}><Icon name="plus" size={18}/> Isi judul</button>}/>}
+        <button type="button" className="btn sec block" style={{marginTop:'var(--s3)'}} onClick={()=>navigate('jjk')}><Icon name="flag" size={18}/> Jejak judul dan outline</button></section>
       <section className="card" aria-label="Tahapan pra-skripsi"><div className="sec-h"><h2>Tahapan pra-skripsi</h2><Badge tone={done===PRA.length?'ok':'neutral'}>{done} dari {PRA.length} selesai</Badge></div>
         <p className="mut" style={{fontSize:'var(--fs-xs)',margin:0}}>Catatan pribadi sebelum Bab I. Tahapan ini tidak dihitung dalam progres Bab I sampai Bab V.</p>
         <ul className="pra">{PRA.map(p=>{const s=row?.['st_'+p.k]||'belum',t=row?.['tg_'+p.k];

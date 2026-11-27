@@ -25,7 +25,7 @@ Reset sandi: mahasiswa kirim permintaan (Lupa kata sandi) > admin verifikasi ide
 Dokumen & Drive, bukti revisi multi-link (validasi link Drive), jadwal (kalender bulanan + daftar), rundown (indikator terlambat), pengingat deadline di dashboard, ringkasan (dibuat dari catatan tersimpan, bisa diedit, salin, cetak/PDF), pencarian global, CSV ekspor/impor (pemetaan kolom, validasi, duplikat, rollback), backup JSON manual + riwayat, indikator offline, tombol pasang aplikasi, ikon PNG, hitungan data di dashboard admin, sesi login user dan admin dipisah.
 
 ## Belum ada (tahap berikutnya)
-Kalender mingguan, restore backup, riwayat perubahan per revisi, pratinjau gambar Drive di dalam aplikasi, date/time picker custom, sinkronisasi offline selain cache bawaan Firestore, uji otomatis.
+Riwayat perubahan per revisi, pratinjau gambar Drive di dalam aplikasi, date/time picker custom, sinkronisasi offline selain cache bawaan Firestore, uji otomatis.
 
 ## PWA, offline, dan notifikasi (Batch 4D)
 - **Instal:** landing, `/user/`, dan `/admin/` masing-masing punya `manifest.webmanifest` dan `service-worker.js` dengan scope sub-path sendiri. Service worker user/admin diisi daftar precache (termasuk aset ber-hash) dan versi otomatis oleh `shared/pwa-plugin.js` saat `npm run build`; landing diberi versi hash commit oleh `deploy.yml`. Tombol/petunjuk pasang ada di Pengaturan.
@@ -33,6 +33,15 @@ Kalender mingguan, restore backup, riwayat perubahan per revisi, pratinjau gamba
 - **Keluar:** semua jalur lewat dialog konfirmasi (tombol Keluar ada di Pengaturan > Akun). Di app user ada opsi menghapus data offline perangkat.
 - **Mode offline (opt-in, per perangkat, default mati):** Pengaturan > Mode offline. Cache Firestore di IndexedDB tidak terenkripsi; jangan aktifkan di perangkat bersama. Login pertama di perangkat baru butuh internet.
 - **Notifikasi:** status izin ditampilkan apa adanya (belum diminta/diizinkan/diblokir). Hanya muncul saat BIMTRACK terbuka; notifikasi saat tertutup butuh Cloud Functions + FCM (Blaze) dan belum diaktifkan.
+
+## Batch 4F
+- **Jejak Judul dan Outline** (`#/jjk`): riwayat pengajuan outline (termasuk yang ditolak), outline disetujui, metode penelitian disetujui, judul proposal, seminar proposal, judul skripsi, sidang. Koleksi baru `jejak`; tidak ikut rumus progres. Karena koleksi baru, **`firestore.rules` wajib diterbitkan ulang** (hanya `jejak` ditambahkan ke `studentCol`). Sebelum diterbitkan, halaman Jejak menampilkan galat dengan tombol Coba lagi, sedangkan fitur lain tetap jalan (backup dan pencarian melewati jejak dan memberi tahu).
+- **Pencarian global:** mengetuk hasil membuka detail data (bukan hanya daftar); mencakup jejak judul dan judul skripsi; menampilkan potongan teks yang cocok.
+- **Laporan:** cakupan ringkasan baru "Jejak judul dan outline"; Cetak/PDF memakai kop (nama, NIM, prodi, tanggal cetak); tombol Rekap progres per bab (CSV) memakai rumus progres yang sama (`progress.js` tidak diubah).
+- **Backup dan pulihkan:** backup JSON kini menyertakan jejak dan judul skripsi. Tab **Pulihkan** memeriksa tiap baris, hanya menambah data yang ID-nya belum ada (tidak menimpa), semua pemilik data diganti ke akun yang sedang masuk, dan dibatalkan (rollback) bila gagal. Judul skripsi ditulis terakhir karena aturan Firestore tidak mengizinkan penghapusan dokumen itu.
+- **Kalender HP:** tombol Tambahkan ke kalender HP (kartu Pengingat dan detail jadwal) mengunduh berkas `.ics`. Jadwal ber-jam menjadi acara 1 jam + alarm 30 menit sebelum mulai; tanpa jam menjadi acara seharian tanpa alarm. Pengingat saat aplikasi tertutup tanpa Blaze, alarm dijalankan aplikasi kalender di HP.
+- **Pengaturan** dirapikan (Profil, Tampilan + format tanggal, Keamanan, Perangkat, Data dan bantuan, Akun) dan **Pusat Bantuan** (`#/bantuan`) berisi panduan nyata dengan pencarian.
+- Catatan privasi: admin dapat membaca (tidak mengubah) semua koleksi data mahasiswa, termasuk `jejak`.
 
 ## Keterbatasan Spark
 - "Cabut akses" hanya mengubah Firestore; akun Auth tidak dinonaktifkan (perlu Admin SDK/Cloud Functions = Blaze).

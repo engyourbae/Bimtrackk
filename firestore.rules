@@ -22,7 +22,7 @@ service cloud.firestore {
     // ───────────────────────── Fungsi bantu validasi ─────────────────────────
     function isStr(v, max) { return v is string && v.size() > 0 && v.size() <= max; }
     function changedOnly(keys) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys); }
-    function studentCol(c) { return c in ['bimbingan', 'revisi', 'jadwal', 'rundown', 'dokumen', 'fotoRevisi', 'ringkasan', 'backupLogs']; }
+    function studentCol(c) { return c in ['bimbingan', 'revisi', 'jadwal', 'rundown', 'dokumen', 'fotoRevisi', 'ringkasan', 'backupLogs', 'jejak']; }
 
     // ───────────────────────── Admin ─────────────────────────
     match /admins/{uid} {

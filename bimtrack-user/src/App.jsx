@@ -1,12 +1,9 @@
 import {useEffect,useState} from 'react';
-import {onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,updatePassword,signOut} from 'firebase/auth';
-import {doc,onSnapshot,setDoc,getDoc,addDoc,updateDoc,collection,query,where,serverTimestamp} from 'firebase/firestore';
+import {onAuthStateChanged,signOut} from 'firebase/auth';
 import {useDocPaths} from './useData';
-import {auth,db} from './firebase';
-import {getTheme,setTheme} from './shared/theme';
-import {ToastHost,toast,Pass,Icon,Badge,ThemePick,PageHead,AuthLayout,BootScreen,Splash,Skeleton,SessionCard,startSessionGuard,markSeen,Btn,useFlash,AccountCard,LogoutButton,InstallCard,ErrorState} from './shared/ui';
+import {auth} from './firebase';
+import {ToastHost,toast,Icon,AuthLayout,BootScreen,Splash,Skeleton,startSessionGuard,markSeen,LogoutButton,ErrorState} from './shared/ui';
 import {logoutUser,offlineOn,LO} from './offline';
-import {OfflineCard,NotifControl} from './Device';
 import Auth from './Auth';
 import Dash from './Dash';
 import AppShell from '@shared/shell';
@@ -19,11 +16,11 @@ import Journey from './Journey';
 import JadwalPage from './Jadwal';
 import Laporan from './Laporan';
 import Search from './Search';
+import Jejak from './Jejak';
+import Bantuan from './Bantuan';
+import Settings,{ChangePass} from './Settings';
 import PwaBar from './Pwa';
 import PageSkeleton from './PageSkeleton';
-function ChangePass({uid,force}){const[p,setP]=useState(''),[b,setB]=useState(false),[ok,flash]=useFlash();
-  const go=async()=>{if(p.length<6)return toast('Minimal 6 karakter','err');setB(true);try{await updatePassword(auth.currentUser,p);if(force)updateDoc(doc(db,'users',uid),{mustChangePassword:false}).catch(e=>toast(e.message,'err'));setP('');flash();toast('Kata sandi diganti')}catch(e){toast(e.code==='auth/requires-recent-login'?'Keluar lalu masuk lagi, kemudian ulangi':e.message,'err')}setB(false)};
-  return <div className="field" style={force?undefined:{marginTop:12}}>{!force&&<label>Ganti kata sandi</label>}<Pass value={p} onChange={setP} placeholder="Kata sandi baru" auto="new-password"/><Btn className="btn" style={{width:'100%',marginTop:8}} busy={b} done={ok} onClick={go}>{ok?'Tersimpan':'Simpan'}</Btn></div>}
 export default function App(){
   const[u,setU]=useState(undefined),{page:pg,action,id:rid}=useRoute();
   useEffect(()=>onAuthStateChanged(auth,x=>{setU(x);if(x)markSeen()}),[]);
@@ -58,7 +55,9 @@ export default function App(){
       {(page==='jdw'||page==='run')&&<JadwalPage uid={du} tab={page} late={late} autoNew={auto(page)} onAutoNew={done} openId={opn(page)} onOpenId={done}/>}
       {page==='dok'&&<Crud autoNew={auto('dok')} onAutoNew={done} openId={opn('dok')} onOpenId={done} col="dokumen" uid={du} title="Dokumen" heading="Arsip Dokumen" fields={DOK} titleKey="nama" subKeys={['tanggal','folder','status']} filters={[{key:'kategori',label:'Kategori',options:DOK[1].options},{key:'status',label:'Status',options:DOK[6].options}]} range="tanggal" statusKey="status" tones={DOK_TONE} archivable views={['list','group']} groupKey="kategori" defaults={()=>({tanggal:todayStr(),status:'Draft'})} urlKey="url"/>}
       {page==='bkt'&&<Crud autoNew={auto('bkt')} onAutoNew={done} openId={opn('bkt')} onOpenId={done} col="fotoRevisi" uid={du} title="Bukti Revisi" heading="Dokumentasi & Bukti" fields={BKT} titleKey="nama" subKeys={['tanggal','jenis']} filters={[{key:'jenis',label:'Jenis',options:BKT[1].options}]} range="tanggal" archivable views={['gallery','list']} defaults={()=>({tanggal:todayStr()})} urlKey="url"/>}
-      {(page==='rin'||page==='csv')&&<Laporan uid={du} tab={page}/>}{page==='cari'&&<Search uid={du} go={go}/>}
-      {page==='set'&&<div><PageHead title="Pengaturan" sub="Profil, tampilan, dan keamanan akun"/><div className="card"><b>{prof.nama}</b><p className="mut">NIM {prof.nim}<br/>{prof.prodi} · {prof.fakultas}<br/>{prof.universitas}</p><Badge tone="ok">Disetujui</Badge></div><div className="card"><div className="field"><label>Tema tampilan</label><ThemePick get={getTheme} set={setTheme}/></div><ChangePass uid={u.uid}/></div><SessionCard app="user"/><OfflineCard/><section className="card" aria-label="Notifikasi"><div className="row"><Icon name="bell" size={20}/><h2 className="sp">Notifikasi</h2></div><NotifControl/></section><InstallCard/><AccountCard onLogout={logoutUser} {...LO}/></div>}
+      {(page==='rin'||page==='csv')&&<Laporan uid={du} tab={page} prof={prof}/>}{page==='cari'&&<Search uid={du}/>}
+      {page==='jjk'&&<Jejak uid={du} autoNew={auto('jjk')} onAutoNew={done} openId={opn('jjk')} onOpenId={done}/>}
+      {page==='bantuan'&&<Bantuan/>}
+      {page==='set'&&<Settings prof={prof} uid={u.uid}/>}
     </AppShell>}
   return <>{body}<Splash ready={!boot}/><ToastHost/></>}

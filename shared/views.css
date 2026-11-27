@@ -91,3 +91,20 @@
 .pra li{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--s3);padding:var(--s3);border:1px solid var(--bd);border-radius:var(--r-md)}
 .pra-t{flex:1 1 200px;min-width:0;display:flex;flex-direction:column;gap:4px;font-size:var(--fs-sm)}
 .pra-s{flex:0 0 168px;max-width:100%}
+
+/* ---------- Pengaturan (profil, bagian) dan Pusat Bantuan ---------- */
+.set-p{display:flex;flex-direction:column;gap:var(--s2)}
+.avatar.lg{width:56px;height:56px;font-size:var(--fs-xl)}
+.set-pt{display:flex;align-items:center;flex-wrap:wrap;gap:var(--s3);margin-bottom:var(--s2)}.set-pt h2{margin:0;overflow-wrap:anywhere}
+.set-r{display:flex;justify-content:space-between;gap:var(--s4);padding:var(--s2) 0;border-top:1px solid var(--bd);font-size:var(--fs-sm)}.set-r b{text-align:right;font-weight:600;overflow-wrap:anywhere}
+.set-s>.row{margin-bottom:var(--s3)}
+.hlp-g{margin-bottom:var(--s5)}.hlp-g>h2{margin:0 0 var(--s3)}
+.hlp{padding:0;margin-bottom:var(--s2);overflow:hidden}
+.hlp>summary{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);min-height:var(--tap);padding:var(--s3) var(--s4);font-weight:600;cursor:pointer;list-style:none}
+.hlp>summary::-webkit-details-marker{display:none}
+.hlp>summary svg{flex:none;transform:rotate(-90deg);transition:transform var(--dur-fast) var(--ease)}
+.hlp[open]>summary svg{transform:rotate(90deg)}
+.hlp-b{padding:0 var(--s4) var(--s4);display:flex;flex-direction:column;gap:var(--s3);font-size:var(--fs-sm);line-height:var(--lh-body)}
+.hlp-b p{margin:0}
+.hlp-b .btn{align-self:flex-start}
+@media(prefers-reduced-motion:reduce){.hlp>summary svg{transition:none}}

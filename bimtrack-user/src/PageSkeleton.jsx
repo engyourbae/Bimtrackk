@@ -32,8 +32,8 @@ const HeadSk=({title,sub,act=true})=><header className="pagehead"><div><h1>{titl
 const ToolbarSk=({views})=><div className="toolbar" aria-hidden="true"><div className="search"><Skeleton h={44} r={12}/></div><Skeleton w={96} h={44} r={12}/><Skeleton w={104} h={44} r={12}/>{views&&<Skeleton w={views===3?236:176} h={44} r={12}/>}</div>;
 const TabSk=({w=150,cls})=><div className={cls} style={cls?undefined:{marginBottom:'var(--s3)'}} aria-hidden="true"><Skeleton w={w} h={44} r={12}/></div>;
 
-const ARSIP=['bim','rev','dok','bkt']; // halaman dengan tab Aktif | Arsip
-const VIEWS={bkt:2,dok:2};            // halaman dengan pilihan tampilan di toolbar
+const ARSIP=['bim','rev','dok','bkt','jjk']; // halaman dengan tab Aktif | Arsip
+const VIEWS={bkt:2,dok:2,jjk:2};            // halaman dengan pilihan tampilan di toolbar
 
 /** Kerangka halaman aktif sesuai rute. label = judul menu halaman itu. */
 export default function PageSkeleton({page,label}){
