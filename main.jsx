@@ -1,0 +1,12 @@
+import {createRoot} from 'react-dom/client';
+import '@fontsource-variable/plus-jakarta-sans';
+import '@fontsource-variable/manrope';
+import './shared/styles.css';
+import {applyTheme} from '@shared/theme';
+import {applyAccent} from '@shared/accent';
+import App from './App';
+import {registerPwa} from '@shared/pwa';
+import {lockGestures} from '@shared/motion';
+applyTheme();applyAccent();lockGestures();
+createRoot(document.getElementById('root')).render(<App/>);
+registerPwa();
