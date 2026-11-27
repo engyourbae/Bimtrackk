@@ -103,6 +103,31 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // ───────────────────────── Sesi tunggal (Batch 5) ─────────────────────────
+    // sesi/{uid} = {deviceId, startedAt, kickedAt?, kickBy?}. Pemilik menulis deviceId + startedAt (= waktu server) dan TIDAK bisa
+    // mengubah/menghapus kickedAt/kickBy; hanya admin yang mengisi kickedAt + kickBy. Tidak dihapus. Tanpa get() tambahan di koleksi lain.
+    match /sesi/{uid} {
+      function sesiOk(d) {
+        return d.keys().hasOnly(['deviceId', 'startedAt', 'kickedAt', 'kickBy'])
+          && d.keys().hasAll(['deviceId', 'startedAt'])
+          && d.deviceId is string && d.deviceId.size() >= 8 && d.deviceId.size() <= 64
+          && d.startedAt == request.time;
+      }
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow create: if signedIn() && request.auth.uid == uid
+        && sesiOk(request.resource.data)
+        && !request.resource.data.keys().hasAny(['kickedAt', 'kickBy']);
+      allow update: if (signedIn() && request.auth.uid == uid
+          && sesiOk(request.resource.data)
+          && request.resource.data.get('kickedAt', null) == resource.data.get('kickedAt', null)
+          && request.resource.data.get('kickBy', null) == resource.data.get('kickBy', null))
+        || (isAdmin()
+          && changedOnly(['kickedAt', 'kickBy'])
+          && request.resource.data.kickedAt == request.time
+          && request.resource.data.kickBy == request.auth.uid);
+      allow delete: if false;
+    }
+
     // ───────────────────────── Data skripsi mahasiswa ─────────────────────────
     // Hanya akun approved, hanya miliknya; admin hanya membaca. Bidang pengenal tidak bisa dipalsukan atau dipindah pemilik.
     match /{col}/{docId} {

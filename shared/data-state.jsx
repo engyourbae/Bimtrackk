@@ -3,7 +3,7 @@
 //  - Skeleton langsung tampil, dan setelah tampil bertahan minimal SK_MIN ms agar tidak berkedip.
 //  - Skeleton tidak tampil selamanya: lewat SK_TIMEOUT ms jadi keadaan galat/offline yang jujur dengan tombol "Coba lagi".
 //  - Daftar kosong yang hanya berasal dari cache saat offline TIDAK dianggap "belum ada data" (belum bisa dipastikan) → keadaan offline.
-import {useEffect,useState} from 'react';
+import {Component,useEffect,useState} from 'react';
 import {EmptyState} from './ui/core';
 import {Icon} from './icons';
 
@@ -24,18 +24,22 @@ const useOnline=()=>{
 /** Langganan beberapa sumber data langsung.
  *  keys       : nama sumber, mis. ['bimbingan','revisi'].
  *  subscribe  : key => (onData,onError) => unsubscribe. onData(daftar,{fromCache}).
- *  depKey     : nilai yang bila berubah mengulang langganan (mis. uid). Opsi: {enabled,timeout,hold}.
+ *  depKey     : nilai yang bila berubah mengulang langganan (mis. uid). Opsi: {enabled,timeout,hold,peek}.
+ *  peek       : key => {list,meta}|undefined — data yang sudah ada di langganan bersama; bila semua sumber sudah ada, tidak ada skeleton sama sekali.
  *  Hasil      : {d,status,error,retry,online}. status: 'idle'|'loading'|'ready'|'error'|'timeout'|'offline'. d[key] hanya ada bila sumber itu sudah datang. */
-export function useLive(keys,subscribe,depKey='',{enabled=true,timeout=SK_TIMEOUT,hold=SK_MIN}={}){
-  const[tick,setTick]=useState(0),[s,setS]=useState({d:{},ok:{},err:null}),[late,setLate]=useState(false),[held,setHeld]=useState(true),online=useOnline(),kk=keys.join('|');
+export function useLive(keys,subscribe,depKey='',{enabled=true,timeout=SK_TIMEOUT,hold=SK_MIN,peek}={}){
+  const kk=keys.join('|'),
+    seed=()=>{const d={},ok={};if(enabled)keys.forEach(k=>{const p=peek&&peek(k);if(p){d[k]=p.list;ok[k]=!(p.meta?.fromCache&&!p.list.length)}});return{d,ok,err:null}},
+    warmOf=x=>keys.length>0&&keys.every(k=>k in x.d);
+  const[tick,setTick]=useState(0),[s,setS]=useState(seed),[late,setLate]=useState(false),[held,setHeld]=useState(()=>!warmOf(seed())),online=useOnline();
   useEffect(()=>{
-    watchPower();setS({d:{},ok:{},err:null});setLate(false);setHeld(true);
+    watchPower();const sd=seed(),warm=warmOf(sd);setS(sd);setLate(false);setHeld(!warm);
     if(!enabled)return;
-    const tl=setTimeout(()=>setLate(true),timeout),th=setTimeout(()=>setHeld(false),hold);
+    const tl=setTimeout(()=>setLate(true),timeout),th=warm?0:setTimeout(()=>setHeld(false),hold);
     const offs=keys.map(k=>subscribe(k)(
-      (list,meta={})=>setS(p=>({...p,d:{...p.d,[k]:list},ok:{...p.ok,[k]:!!p.ok[k]||!(meta.fromCache&&!list.length)}})),
+      (list,meta={})=>setS(p=>({...p,d:{...p.d,[k]:list},ok:{...p.ok,[k]:!!p.ok[k]||!(meta.fromCache&&!list.length)},err:p.err&&p.err.key===k?null:p.err})),
       e=>setS(p=>({...p,err:{key:k,code:e?.code,message:e?.message}}))));
-    return()=>{clearTimeout(tl);clearTimeout(th);offs.forEach(f=>f&&f())}},[kk,depKey,tick,enabled]);// eslint-disable-line
+    return()=>{clearTimeout(tl);th&&clearTimeout(th);offs.forEach(f=>f&&f())}},[kk,depKey,tick,enabled]);// eslint-disable-line
   const loaded=keys.every(k=>k in s.d),unconf=keys.some(k=>k in s.d&&!s.ok[k]);
   let raw;
   if(!enabled)raw='idle';
@@ -47,7 +51,7 @@ export function useLive(keys,subscribe,depKey='',{enabled=true,timeout=SK_TIMEOU
   return{d:s.d,status,error:s.err,online,retry:()=>setTick(t=>t+1)}}
 
 const MSG={
-  offline:['Kamu sedang offline','Salinan data ini belum ada di perangkat, jadi belum bisa dipastikan isinya. Sambungkan internet lalu coba lagi.'],
+  offline:['Kamu sedang offline','Data ini belum pernah dimuat di perangkat ini, jadi belum ada salinan yang bisa ditampilkan. Sambungkan internet sekali untuk memuatnya; setelah itu halaman ini bisa dibuka lagi saat offline.'],
   timeout:['Memuat terlalu lama','Koneksi lambat atau terputus, jadi data belum bisa dipastikan. Coba lagi sebentar lagi.'],
   error:['Data tidak bisa dimuat','Terjadi masalah saat mengambil data. Periksa koneksi lalu coba lagi.']};
 
@@ -64,3 +68,13 @@ export function DataState({status,onRetry,error,skeleton,label='Memuat data',isE
   if(status==='loading')return <div className="ds-sk" role="status" aria-busy="true" aria-label={label}><span className="sr">{label}…</span>{skeleton}</div>;
   if(status==='error'||status==='timeout'||status==='offline')return <ErrorState kind={status} error={error} onRetry={onRetry} compact={compact}/>;
   return isEmpty?(empty||<EmptyState compact={compact}/>):<>{children}</>}
+
+/** Penjaga galat halaman. Dipakai di sekitar halaman yang dimuat malas (lazy): bila berkas halaman gagal dimuat
+ *  (offline sebelum berkas tersimpan, atau versi baru menggantikan berkas lama) tampil pesan jujur + Muat ulang, bukan layar kosong. */
+export class PageBoundary extends Component{
+  state={bad:false};
+  static getDerivedStateFromError(){return{bad:true}}
+  componentDidCatch(e){try{console.error('[BIMTRACK] halaman gagal dimuat',e)}catch{}}
+  render(){return this.state.bad
+    ?<div className="empty-s err-s" role="alert"><span className="err-ic" aria-hidden="true"><Icon name="info" size={28}/></span><h3>Halaman belum bisa dibuka</h3><p>Berkas halaman ini gagal dimuat. Biasanya karena perangkat offline sebelum halaman tersimpan, atau ada versi baru. Sambungkan internet lalu muat ulang.</p><button type="button" className="btn sec" onClick={()=>location.reload()}>Muat ulang</button></div>
+    :this.props.children}}

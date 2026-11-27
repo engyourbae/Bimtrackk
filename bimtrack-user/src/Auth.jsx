@@ -4,7 +4,7 @@ import {doc,setDoc,getDoc,addDoc,collection,serverTimestamp} from 'firebase/fire
 import {auth,db} from './firebase';
 import {nimEmail,validNim} from './shared/nim';
 import {AuthLayout,Field,Pass,Checkbox,Modal,Icon,toast,useLoginGuard,readGuard,LockNotice,Pager,InfoPanel,Onboarding,hasSeen,markSeen,consumeExpiredNotice,resetSessionClock,useOnline} from './shared/ui';
-import {offlineOn,consumeClearFail} from './offline';
+import {offlineOn,consumeClearFail,consumeLogoutMsg} from './offline';
 import {parseHash} from '@shared/router';
 import {fmtWait} from '@shared/security';
 
@@ -36,10 +36,11 @@ export default function Auth(){
     setBusy(false)};
   const sendReset=()=>{const e={};if(!validNim(fg.nim))e.nim=NIM_MSG;if(!fg.nama.trim())e.nama='Wajib diisi.';setFg(s=>({...s,e}));if(Object.keys(e).length)return;
     addDoc(collection(db,'resetRequests'),{nim:fg.nim.trim(),nama:fg.nama.trim(),status:'pending',createdAt:serverTimestamp()}).catch(()=>toast('Permintaan belum terkirim. Periksa koneksi lalu coba lagi.','err'));setFg(null);toast('Permintaan terkirim. Hubungi admin untuk sandi sementara.')};
-  const on=useOnline(),[clearFail]=useState(consumeClearFail),reg=mode==='reg';
+  const on=useOnline(),[clearFail]=useState(consumeClearFail),[outMsg]=useState(consumeLogoutMsg),reg=mode==='reg';
   if(intro)return <Onboarding onDone={()=>{markSeen();setIntro(false)}}/>;
   const form=<form onSubmit={submit} noValidate>
       {reg&&<ol className="steps" aria-label="Langkah pendaftaran"><li className={step>=1?'on':''} aria-current={step===1?'step':undefined}>1. Data diri</li><li className={step>=2?'on':''} aria-current={step===2?'step':undefined}>2. Kata sandi</li></ol>}
+      {outMsg&&!reg&&<div className="lockmsg" role="alert"><Icon name="alert" size={18}/><span>{outMsg}</span></div>}
       {expired&&!reg&&<div className="lockmsg note" role="status"><Icon name="clock" size={18}/><span>Sesi berakhir karena tidak aktif. Masuk lagi untuk melanjutkan.</span></div>}
       {!on&&!reg&&<div className="lockmsg note" role="status"><Icon name="wifi" size={18}/><span>Perangkat sedang offline. Masuk butuh internet. Agar BIMTRACK bisa dibuka tanpa masuk lagi saat offline, aktifkan Mode offline di Pengaturan setelah masuk.</span></div>}
       {clearFail&&<div className="lockmsg" role="alert"><Icon name="alert" size={18}/><span>Data offline di perangkat ini belum terhapus karena tab BIMTRACK lain masih terbuka. Tutup tab lain, masuk, lalu keluar lagi untuk menghapusnya.</span></div>}

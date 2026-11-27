@@ -10,5 +10,7 @@ export default defineConfig({
   base:'./',
   plugins:[react(),bimtrackPwa()],
   resolve:{alias:{'@shared':path.resolve(here,'../shared'),react:nm('react'),'react-dom':nm('react-dom')},dedupe:['react','react-dom']},
+  // Pecah vendor: React dan Firebase masing-masing satu chunk (cache peramban lebih awet, dimuat paralel). Semua chunk (termasuk halaman lazy) masuk precache lewat pwa-plugin.
+  build:{rollupOptions:{output:{manualChunks(id){if(!id.includes('node_modules'))return;if(/node_modules\/(react|react-dom|scheduler)\//.test(id))return'react';if(/node_modules\/(firebase|@firebase)\//.test(id))return'firebase'}}}},
   server:{fs:{allow:[path.resolve(here,'..')]}}
 });

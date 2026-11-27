@@ -1,6 +1,7 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
 import {collection,doc,setDoc,updateDoc,deleteDoc,serverTimestamp} from 'firebase/firestore';
-import {useCols} from './useData';
+import {useCols,confirmedAt} from './useData';
+import {send} from './sync';
 import {db} from './firebase';
 import {Modal,Select,StatusSelect,Segmented,DatePicker,TimePicker,Badge,Icon,PageHead,EmptyState,Pagination,usePager,Menu,ContextMenu,Timeline,ConfirmDialog,DataState,toast} from './shared/ui';
 import {fmtDate,todayStr,relDay,BULAN,BULAN_S} from '@shared/date';
@@ -18,8 +19,7 @@ const takePrefill=col=>{try{const k='bimtrack-prefill:'+col,v=sessionStorage.get
 /** Titip filter awal untuk halaman daftar (mis. dari Perjalanan Skripsi: hanya Bab II). */
 export const setFilter=(col,data)=>{try{sessionStorage.setItem('bimtrack-filter:'+col,JSON.stringify(data))}catch{}};
 const takeFilter=col=>{try{const k='bimtrack-filter:'+col,v=sessionStorage.getItem(k);sessionStorage.removeItem(k);return v?JSON.parse(v):{}}catch{return{}}};
-/** Umpan balik simpan yang jujur: Firestore menyimpan di perangkat dulu, lalu sinkron saat online. */
-const savedMsg=()=>typeof navigator!=='undefined'&&navigator.onLine===false?'Tersimpan di perangkat. Akan disinkronkan saat online.':'Tersimpan';
+// Semua tulisan lewat send() (sync.js): umpan balik jujur (tersimpan / menunggu kirim / ditolak) dan galat tidak hilang diam-diam.
 
 function Preview({row,urlKey,onClose}){
   const info=row&&parseDrive(row[urlKey]);
@@ -38,12 +38,15 @@ export default function Crud({col,uid,title,heading,listTitle,embedded,fields,ti
   const[q,setQ]=useState(''),[fv,setFv]=useState(()=>takeFilter(col)),[rg,setRg]=useState({}),[desc,setDesc]=useState(descDefault),[showF,setShowF]=useState(false),
     [tab,setTab]=useState('aktif'),[view,setView]=useState(()=>{const v=ls('bimtrack-view-'+col);return views.includes(v)?v:views[0]}),
     [form,setForm]=useState(null),[errs,setErrs]=useState({}),[askClose,setAskClose]=useState(false),[del,setDel]=useState(null),[det,setDet]=useState(null),[prev,setPrev]=useState(null);
-  const init=useRef(''),delRef=useRef(null);
+  const init=useRef(''),delRef=useRef(null),base=useRef(null);
   const relCols=useMemo(()=>[...new Set([...fields.filter(f=>f.type==='rel').map(f=>f.col),...relations.map(r=>r.col)])],[fields,relations]);
   // satu langganan untuk daftar utama + data relasi; status memuat/galat/offline ditangani DataState (tidak ada lagi skeleton tanpa ujung)
   const live=useCols([col,...relCols.filter(c=>c!==col)],uid),rel=live.d,rows=live.status==='ready'?(live.d[col]??null):null;
   const empty=()=>{const base={...(defaults?.()||{})};filters.forEach(f=>{if(fv[f.key]&&(f.options||f.from)&&fields.some(x=>x.k===f.key))base[f.key]=fv[f.key]});return{...base,...takePrefill(col)}};
-  const openForm=v=>{const d=v||empty();init.current=JSON.stringify(d);setErrs({});setForm(d)};
+  // base = updatedAt dokumen menurut snapshot yang dikonfirmasi server saat formulir edit dibuka (null = belum bisa dipastikan, mis. offline)
+  const openForm=v=>{const d=v||empty();init.current=JSON.stringify(d);base.current=d.id?(confirmedAt(col,uid,d.id)??null):null;setErrs({});setForm(d)};
+  const curMs=form?.id?confirmedAt(col,uid,form.id):undefined,stale=!!form?.id&&base.current!=null&&curMs!=null&&curMs!==base.current;
+  const reload=()=>{const x=(rows||[]).find(r=>r.id===form.id);if(!x){setForm(null);toast('Data ini sudah tidak ada','err');return}const d={...x};init.current=JSON.stringify(d);base.current=confirmedAt(col,uid,x.id)??null;setErrs({});setForm(d)};
   useEffect(()=>{if(autoNew){openForm();onAutoNew?.()}},[autoNew]);// eslint-disable-line
   useEffect(()=>{if(!openId||rows===null)return;const x=rows.find(r=>r.id===openId);if(x)setDet(x);else toast('Data tidak ditemukan','err');onOpenId?.()},[openId,rows]);// eslint-disable-line
   const optsOf=f=>f.options&&f.options!=='data'?f.options:[...new Set((rows||[]).map(r=>r[f.key]).filter(Boolean))].sort();
@@ -66,17 +69,18 @@ export default function Crud({col,uid,title,heading,listTitle,embedded,fields,ti
     if(form.jamMulai&&form.jamSelesai&&form.jamSelesai<form.jamMulai)e.jamSelesai='Jam selesai tidak boleh lebih awal dari jam mulai';
     if(form.tanggalSelesai&&form.tanggal&&form.tanggalSelesai<form.tanggal)e.tanggalSelesai='Tanggal selesai tidak boleh sebelum tanggal diberikan';
     return e};
-  const save=()=>{const e=validate();setErrs(e);const bad=Object.keys(e)[0];if(bad){document.getElementById('f-'+bad)?.focus();return}
+  const save=(force)=>{const e=validate();setErrs(e);const bad=Object.keys(e)[0];if(bad){document.getElementById('f-'+bad)?.focus();return}
+    if(stale&&!force){toast('Data ini baru diubah di perangkat lain. Pilih Muat ulang atau Timpa.','err');return}
     const prevRow=form.id?rows.find(r=>r.id===form.id):null,id=form.id||doc(collection(db,col)).id,data={};fields.forEach(x=>data[x.k]=(form[x.k]||'').trim());
     if(history&&statusKey){data._wasDone=prevRow?.[statusKey]===doneStatus;doneFix(data,data[statusKey]);if(data[statusKey])data.riwayat=histOf(prevRow,data[statusKey]);else if(prevRow?.riwayat)data.riwayat=prevRow.riwayat}
-    const p=form.id?updateDoc(doc(db,col,id),{...data,updatedAt:serverTimestamp()}):setDoc(doc(db,col,id),{...data,id,ownerUid:uid,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
-    p.catch(er=>toast(er.message,'err'));setForm(null);toast(savedMsg())};
+    const edit=!!form.id,ref=doc(db,col,id),payload=edit?{...data,updatedAt:serverTimestamp()}:{...data,id,ownerUid:uid,createdAt:serverTimestamp(),updatedAt:serverTimestamp()};
+    send(()=>edit?updateDoc(ref,payload):setDoc(ref,payload),{label:title+' “'+((data[titleKey]||'data').slice(0,40))+'”'});setForm(null)};
   const closeForm=()=>{if(JSON.stringify(form)!==init.current)setAskClose(true);else setForm(null)};
-  const remove=()=>{const x=del;deleteDoc(doc(db,col,x.id)).catch(e=>toast(e.message,'err'));setDel(null);setDet(null);toast('Dihapus: '+((x[titleKey]||'data').slice(0,40)))};
+  const remove=()=>{const x=del,t=(x[titleKey]||'data').slice(0,40);send(()=>deleteDoc(doc(db,col,x.id)),{label:'Hapus “'+t+'”',ok:'Dihapus: '+t});setDel(null);setDet(null)};
   const setStatus=(x,s)=>{const d={[statusKey]:s,updatedAt:serverTimestamp()};if(history)d.riwayat=histOf(x,s);if(doneKey){const dd={[doneKey]:x[doneKey]||'',_wasDone:x[statusKey]===doneStatus};doneFix(dd,s);d[doneKey]=dd[doneKey]}
-    updateDoc(doc(db,col,x.id),d).catch(e=>toast(e.message,'err'));setDet(v=>v&&v.id===x.id?{...v,...d,updatedAt:undefined}:v);toast('Status diubah ke “'+s+'”')};
-  const archive=x=>{const was=!!x.archived;updateDoc(doc(db,col,x.id),{archived:!was,updatedAt:serverTimestamp()}).catch(e=>toast(e.message,'err'));setDet(null);
-    toast(was?'Dipulihkan dari arsip':'Dipindahkan ke arsip','ok',{label:'Urungkan',onClick:()=>updateDoc(doc(db,col,x.id),{archived:was,updatedAt:serverTimestamp()}).catch(e=>toast(e.message,'err'))})};
+    send(()=>updateDoc(doc(db,col,x.id),d),{label:'Status “'+(x[titleKey]||'data').slice(0,30)+'”',ok:'Status diubah ke “'+s+'”'});setDet(v=>v&&v.id===x.id?{...v,...d,updatedAt:undefined}:v)};
+  const archive=x=>{const was=!!x.archived,t=(x[titleKey]||'data').slice(0,30);send(()=>updateDoc(doc(db,col,x.id),{archived:!was,updatedAt:serverTimestamp()}),{label:(was?'Pulihkan “':'Arsipkan “')+t+'”',ok:was?'Dipulihkan dari arsip':'Dipindahkan ke arsip'});setDet(null);
+    toast(was?'Dipulihkan dari arsip':'Dipindahkan ke arsip','ok',{label:'Urungkan',onClick:()=>send(()=>updateDoc(doc(db,col,x.id),{archived:was,updatedAt:serverTimestamp()}),{label:'Urungkan arsip “'+t+'”',ok:'Dikembalikan'})})};
   const acts=x=>[{label:'Lihat detail',icon:'eye',onClick:()=>setDet(x)},{label:'Edit',icon:'pencil',onClick:()=>openForm(x)},...(urlKey&&parseDrive(x[urlKey])?.preview?[{label:'Pratinjau',icon:'image',onClick:()=>setPrev(x)}]:[]),
     ...(archivable?[{label:x.archived?'Pulihkan dari arsip':'Arsipkan',icon:'arsip',onClick:()=>archive(x)}]:[]),{sep:true},{label:'Hapus',icon:'trash',danger:true,onClick:()=>setDel(x)}];
   const pickView=v=>{setView(v);ls('bimtrack-view-'+col,v)};
@@ -139,7 +143,8 @@ export default function Crud({col,uid,title,heading,listTitle,embedded,fields,ti
         {history&&det.riwayat?.length>0&&<section className="relb"><h3>Riwayat status</h3><Timeline items={[...det.riwayat].reverse().map((h,i)=>({key:i,title:h.s,meta:new Date(h.t).toLocaleString('id-ID',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}),tone:tones[h.s]==='neutral'?'':tones[h.s]}))}/></section>}
       </>}</Modal>
 
-    <Modal open={!!form} title={form?.id?'Edit '+title.toLowerCase():'Tambah '+title.toLowerCase()} onClose={closeForm} size="lg" footer={<div className="row"><button type="button" className="btn sec sp" onClick={closeForm}>Batal</button><button type="button" className="btn sp" onClick={save}>Simpan</button></div>}>
+    <Modal open={!!form} title={form?.id?'Edit '+title.toLowerCase():'Tambah '+title.toLowerCase()} onClose={closeForm} size="lg" footer={<div className="row"><button type="button" className="btn sec sp" onClick={closeForm}>Batal</button><button type="button" className="btn sp" onClick={()=>save()}>Simpan</button></div>}>
+      {form&&stale&&<div className="lockmsg" role="alert"><Icon name="alert" size={18}/><div style={{minWidth:0}}><b>Data ini baru diubah di perangkat lain.</b> Muat ulang untuk memakai versi terbaru (isianmu di formulir ini dibuang), atau Timpa dengan isianmu.<div className="row" style={{marginTop:8,flexWrap:'wrap'}}><button type="button" className="btn sec sm" onClick={reload}>Muat ulang</button><button type="button" className="btn dan sm" onClick={()=>save(true)}>Timpa</button></div></div></div>}
       {form&&fields.map(x=>{const id='f-'+x.k,v=form[x.k]||'',er=errs[x.k],dup=x.k===urlKey?dupOf(v):null;return <div className="field" key={x.k}><label htmlFor={id}>{x.label}{x.req&&<span className="req"> *</span>}</label>
         {x.type==='rel'?<Select id={id} label={x.label} value={v} options={relOpts(x)} placeholder="Tidak ada" searchable onChange={set(x.k)}/>
         :x.type==='select'?<Select id={id} label={x.label} value={v} options={x.options} placeholder={'Pilih '+x.label.toLowerCase()} invalid={!!er} onChange={set(x.k)}/>

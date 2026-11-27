@@ -2,21 +2,21 @@ import {useState} from 'react';
 import {doc,setDoc,serverTimestamp} from 'firebase/firestore';
 import {db} from './firebase';
 import {useCols} from './useData';
+import {send} from './sync';
 import {Modal,Select,Badge,Icon,DataState,EmptyState,toast} from './shared/ui';
 import {SkripsiSk} from './PageSkeleton';
 import {PRA,PRA_ST,PRA_TONE,JUDUL_ST,JUDUL_TONE} from './config';
 import {todayStr,fmtDate} from '@shared/date';
 import {navigate} from '@shared/router';
-const saved=()=>typeof navigator!=='undefined'&&navigator.onLine===false?'Tersimpan di perangkat. Akan disinkronkan saat online.':'Tersimpan';
 /** Judul skripsi + tahapan pra-skripsi. Satu dokumen `skripsi/{uid}` (uid = pemilik data). Tidak ikut rumus progres Bab I–V.
  *  Punya keadaan memuat/galat sendiri, jadi bila aturan Firestore belum diterbitkan, bagian lain halaman tetap berfungsi. */
 export default function Skripsi({uid}){
   const live=useCols(['skripsi'],uid),row=live.d.skripsi?.[0]||null,[open,setOpen]=useState(false),[judul,setJudul]=useState(''),[js,setJs]=useState(JUDUL_ST[0]);
-  // Firestore menyimpan di perangkat dulu lalu sinkron; janji setDoc baru selesai saat server menjawab, jadi tidak ditunggu.
-  const write=data=>setDoc(doc(db,'skripsi',uid),{id:uid,ownerUid:uid,updatedAt:serverTimestamp(),...(row?{}:{createdAt:serverTimestamp()}),...data},{merge:true}).catch(e=>toast(e.message,'err'));
+  // Lewat send(): hasil tulis dipantau (menunggu kirim / terkirim / ditolak) dan galat tidak hilang diam-diam.
+  const write=data=>send(()=>setDoc(doc(db,'skripsi',uid),{id:uid,ownerUid:uid,updatedAt:serverTimestamp(),...(row?{}:{createdAt:serverTimestamp()}),...data},{merge:true}),{label:'Judul dan tahapan pra-skripsi'});
   const edit=()=>{setJudul(row?.judul||'');setJs(row?.judulStatus||JUDUL_ST[0]);setOpen(true)};
-  const saveJudul=()=>{const t=judul.trim();if(!t)return toast('Judul belum diisi','err');write({judul:t,judulStatus:js});toast(saved());setOpen(false)};
-  const setStage=(k,v)=>{if((row?.['st_'+k]||'belum')===v)return;write({['st_'+k]:v,['tg_'+k]:v==='selesai'?todayStr():''});toast(saved())};
+  const saveJudul=()=>{const t=judul.trim();if(!t)return toast('Judul belum diisi','err');write({judul:t,judulStatus:js});setOpen(false)};
+  const setStage=(k,v)=>{if((row?.['st_'+k]||'belum')===v)return;write({['st_'+k]:v,['tg_'+k]:v==='selesai'?todayStr():''})};
   const done=PRA.filter(p=>row?.['st_'+p.k]==='selesai').length;
   return <DataState status={live.status} error={live.error} onRetry={live.retry} label="Memuat judul dan tahapan pra-skripsi" skeleton={<SkripsiSk/>}>
     <div className="stack">

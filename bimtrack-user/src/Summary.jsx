@@ -1,12 +1,13 @@
 import {useState} from 'react';
 import {collection,doc,setDoc,deleteDoc,serverTimestamp} from 'firebase/firestore';
 import {useCols} from './useData';
+import {send} from './sync';
 import {SummarySk} from './PageSkeleton';
 import {db} from './firebase';
 import {BAB,ST} from './config';
 import {Select,Btn,ConfirmDialog,DataState,EmptyState,useFlash,toast} from './shared/ui';
 import {calcProgress} from './progress';
-import {esc,save} from './files';
+import {esc,save as saveFile} from './files';
 import {todayStr,fmtDate} from '@shared/date';
 const SJ='Jejak judul dan outline',SC=['Bimbingan terakhir',...BAB.slice(0,5).map(b=>'Seluruh bimbingan '+b),SJ];
 const h=t=>String(t??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
@@ -25,14 +26,14 @@ export default function Summary({uid,embedded,prof}){
     const L=(t,a)=>t+'\n'+(a.length?a.map(x=>'- '+x).join('\n'):'- (belum ada catatan)')+'\n\n',d=x=>`${x.tanggal} (${x.dosen}): `,last=inS[inS.length-1];
     setTxt(`RINGKASAN BIMBINGAN - ${scope}\n\n`+L('A. Kesimpulan bimbingan',inS.filter(x=>x.kesimpulan).map(x=>d(x)+x.kesimpulan))+L('B. Arahan dosen (periksa tindak lanjutnya)',inS.filter(x=>x.arahan).map(x=>d(x)+x.arahan))+L('C. Revisi selesai',rv.filter(x=>x.status===ST[4]).map(x=>x.catatan))+L('D. Revisi tertunda',rv.filter(x=>x.status!==ST[4]).map(x=>`[${x.status}] ${x.catatan}`))+L('E. Catatan dan keputusan penting',inS.filter(x=>x.catatan).map(x=>d(x)+x.catatan))+L('F. Pertanyaan untuk pertemuan berikutnya',inS.filter(x=>x.pertanyaan).map(x=>d(x)+x.pertanyaan))+L('G. Target berikutnya',last.targetNext?[last.targetNext]:[]))};
   const save=()=>{if(!txt.trim())return;const id=cur||doc(collection(db,'ringkasan')).id,base={scope,teks:txt,updatedAt:serverTimestamp()};
-    (cur?setDoc(doc(db,'ringkasan',id),base,{merge:true}):setDoc(doc(db,'ringkasan',id),{...base,id,ownerUid:uid,createdAt:serverTimestamp()})).catch(e=>toast(e.message,'err'));setCur(id);toast('Ringkasan disimpan')};
+    send(()=>cur?setDoc(doc(db,'ringkasan',id),base,{merge:true}):setDoc(doc(db,'ringkasan',id),{...base,id,ownerUid:uid,createdAt:serverTimestamp()}),{label:'Ringkasan',ok:'Ringkasan disimpan'});setCur(id)};
   const print=()=>{const w=window.open('');if(!w)return toast('Pop-up diblokir','err');
     const who=prof?[h(prof.nama)+' · NIM '+h(prof.nim),h([prof.prodi,prof.fakultas,prof.universitas].filter(Boolean).join(' · '))].filter(Boolean).join('<br>')+'<br>':'';
     w.document.write('<!doctype html><meta charset="utf-8"><title>'+h(scope)+'</title><style>@page{margin:18mm}body{font:13px/1.55 system-ui,sans-serif;color:#111}h1{font-size:17px;margin:0 0 4px}.m{color:#444;margin:0 0 14px;font-size:12px}pre{font:inherit;white-space:pre-wrap;overflow-wrap:anywhere}</style><h1>'+h(scope)+'</h1><p class="m">'+who+'Dicetak '+h(fmtDate(todayStr(),'panjang'))+'</p><pre>'+h(txt)+'</pre>');w.document.close();w.print()};
   // Rekap progres per bab (CSV): memakai rumus progres yang sama dengan Perjalanan Skripsi
   const rekap=()=>{const P=calcProgress({bimbingan:b,revisi:r,rundown:live.d.rundown||[],today:todayStr()}),D=';';
     const rows=[['Bab','Status','Progres (%)','Sudah dibahas dosen','Bimbingan terlaksana','Revisi selesai','Revisi total','Kegiatan selesai','Kegiatan total','Terlambat'],...P.babs.map(x=>[x.bab,x.status,x.pct,x.discussed?'Ya':'Tidak',b.filter(y=>y.bab===x.bab&&y.status==='Terlaksana').length,x.rev.done,x.rev.total,x.run.done,x.run.total,x.late]),['Keseluruhan','',P.overall,'','','','','','','']];
-    save('bimtrack-rekap-bab-'+todayStr()+'.csv','\uFEFF'+rows.map(z=>z.map(c=>esc(c,D)).join(D)).join('\r\n'),'text/csv;charset=utf-8');toast('Rekap bab diunduh')};
+    saveFile('bimtrack-rekap-bab-'+todayStr()+'.csv','\uFEFF'+rows.map(z=>z.map(c=>esc(c,D)).join(D)).join('\r\n'),'text/csv;charset=utf-8');toast('Rekap bab diunduh')};
   return <div>{!embedded&&<h1>Ringkasan Bimbingan</h1>}<DataState status={live.status} error={live.error} onRetry={live.retry} label="Memuat ringkasan" skeleton={<SummarySk/>}><div className="fld"><Select value={scope} options={SC} onChange={setScope}/></div>
     <button className="btn" style={{width:'100%',marginBottom:12}} onClick={gen}>Buat ringkasan</button>
     <button type="button" className="btn sec block" style={{marginBottom:12}} onClick={rekap}>Rekap progres per bab (CSV)</button>

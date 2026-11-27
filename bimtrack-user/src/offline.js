@@ -3,7 +3,9 @@
 import {setPersistence,browserLocalPersistence,signOut} from 'firebase/auth';
 import {terminate,clearIndexedDbPersistence,waitForPendingWrites} from 'firebase/firestore';
 import {auth,db} from './firebase';
-const K='bimtrack-offline',F='bimtrack-clearfail';
+import {resetData} from './useData';
+import {clearSyncState} from './sync';
+const K='bimtrack-offline',F='bimtrack-clearfail',R='bimtrack-logout-msg';
 const store=(s,k,v)=>{try{if(v===undefined)return s.getItem(k);v===null?s.removeItem(k):s.setItem(k,v)}catch{return null}};
 export const offlineOn=()=>store(localStorage,K)==='1';
 /** Aktifkan/matikan mode offline. Saat aktif: sesi dipaksa tersimpan permanen dan penyimpanan diminta bersifat persisten. */
@@ -14,12 +16,20 @@ export async function setOffline(on){
   store(localStorage,K,'1');return{persisted}}
 /** true bila masih ada perubahan yang belum dikonfirmasi server (menunggu maksimal 1,2 detik). */
 export const hasPending=()=>Promise.race([waitForPendingWrites(db).then(()=>false,()=>false),new Promise(r=>setTimeout(()=>r(true),1200))]);
-/** Keluar. clearData: hapus cache data lokal (IndexedDB Firestore) lalu muat ulang halaman. */
-export async function logoutUser({clearData}={}){
+/** Penanda sesi tunggal milik perangkat ini (nilainya = waktu masuk Auth, jadi masuk baru selalu memeriksa ulang). */
+export const sesiFlag=uid=>'bimtrack-sesi-ok:'+uid;
+/** Keluar. clearData: hapus cache data lokal (IndexedDB Firestore) lalu muat ulang halaman. reason: pesan yang ditampilkan di layar masuk (mis. dikeluarkan dari perangkat lain). */
+export async function logoutUser({clearData,reason}={}){
+  const uid=auth.currentUser?.uid;
+  if(reason)store(sessionStorage,R,reason);
+  if(uid)store(localStorage,sesiFlag(uid),null);
+  resetData();clearSyncState();
   await signOut(auth);
   if(!clearData)return;
   store(localStorage,K,null);
   try{await terminate(db);await clearIndexedDbPersistence(db)}catch{store(sessionStorage,F,'1')}
   location.reload()}
+/** Pesan sekali-tampil untuk layar masuk setelah keluar otomatis (sesi tunggal / admin). */
+export const consumeLogoutMsg=()=>{const v=store(sessionStorage,R);if(v)store(sessionStorage,R,null);return v||''};
 export const consumeClearFail=()=>{const v=store(sessionStorage,F);if(v)store(sessionStorage,F,null);return !!v};
 export const LO={cache:true,pending:hasPending};

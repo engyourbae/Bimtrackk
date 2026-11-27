@@ -1,8 +1,8 @@
-import {useEffect,useState} from 'react';
+import {lazy,Suspense,useEffect,useState} from 'react';
 import {onAuthStateChanged,signOut} from 'firebase/auth';
-import {useDocPaths} from './useData';
+import {useDocPaths,resetData} from './useData';
 import {auth} from './firebase';
-import {ToastHost,toast,Icon,AuthLayout,BootScreen,Splash,Skeleton,startSessionGuard,markSeen,LogoutButton,ErrorState} from './shared/ui';
+import {ToastHost,toast,Icon,AuthLayout,BootScreen,Splash,Skeleton,startSessionGuard,markSeen,LogoutButton,ErrorState,PageBoundary} from './shared/ui';
 import {logoutUser,offlineOn,LO} from './offline';
 import Auth from './Auth';
 import Dash from './Dash';
@@ -12,18 +12,16 @@ import {todayStr} from '@shared/date';
 import Crud,{setPrefill} from './Crud';
 import {BAB,BIM,ST,REV,DOK,BKT,REV_TONE,BIM_TONE,DOK_TONE} from './config';
 import {NAV,ALIAS,PAGES} from './nav';
-import Journey from './Journey';
-import JadwalPage from './Jadwal';
-import Laporan from './Laporan';
-import Search from './Search';
-import Jejak from './Jejak';
-import Bantuan from './Bantuan';
-import Settings,{ChangePass} from './Settings';
 import PwaBar from './Pwa';
 import PageSkeleton from './PageSkeleton';
+import SesiGate from './SesiGate';
+import SyncStatus from './SyncStatus';
+// Halaman yang jarang dipakai dimuat malas (chunk terpisah). Semua chunk tetap masuk precache PWA (shared/pwa-plugin.js), jadi tetap terbuka offline.
+const Journey=lazy(()=>import('./Journey')),JadwalPage=lazy(()=>import('./Jadwal')),Laporan=lazy(()=>import('./Laporan')),Search=lazy(()=>import('./Search')),
+  Jejak=lazy(()=>import('./Jejak')),Bantuan=lazy(()=>import('./Bantuan')),Settings=lazy(()=>import('./Settings')),ChangePass=lazy(()=>import('./Settings').then(m=>({default:m.ChangePass})));
 export default function App(){
   const[u,setU]=useState(undefined),{page:pg,action,id:rid}=useRoute();
-  useEffect(()=>onAuthStateChanged(auth,x=>{setU(x);if(x)markSeen()}),[]);
+  useEffect(()=>onAuthStateChanged(auth,x=>{if(!x)resetData();setU(x);if(x)markSeen()}),[]);
   // kedaluwarsa sesi (hanya aktif bila dinyalakan di Pengaturan; berlaku per perangkat)
   useEffect(()=>{if(!u)return;return startSessionGuard('user',{onExpire:()=>signOut(auth),holdOffline:()=>offlineOn()&&!navigator.onLine,onWarn:()=>toast('Sesi akan berakhir dalam 1 menit karena tidak aktif. Sentuh layar untuk tetap masuk.')})},[u]);
   // pintasan papan ketik: tekan "/" untuk membuka Pencarian (tidak aktif saat mengetik atau saat dialog terbuka)
@@ -40,11 +38,11 @@ export default function App(){
     body=<AppShell loading nav={NAV} page={ALIAS[page]||page} onNavigate={k=>navigate(k)} onLogout={logoutUser} logoutOpts={LO} topSlot={<Skeleton w={44} h={44} r={22}/>}><PageSkeleton page={page} label={NAV.find(n=>n.k===(ALIAS[page]||page))?.label}/></AppShell>}
   else if(['error','timeout','offline'].includes(pl.status))body=<AuthLayout panel={false} title="Akunmu belum bisa dimuat" sub="Data akun diperlukan sebelum aplikasi bisa dibuka."><ErrorState compact kind={pl.status} error={pl.error} onRetry={pl.retry}/><LogoutButton onLogout={logoutUser} {...LO} className="btn sec block"/></AuthLayout>;
   else if(!prof?.approved)body=<AuthLayout panel={false} title={req?.status==='rejected'?'Pendaftaran ditolak':req?.status==='approved'?'Akses dinonaktifkan':'Menunggu persetujuan admin'} sub={req?.status==='rejected'?('Alasan: '+(req.reason||'-')):req?'Akun kamu belum dapat membuka data skripsi. Halaman ini akan terbuka otomatis setelah disetujui.':'Memproses pendaftaran…'}><LogoutButton onLogout={logoutUser} {...LO} className="btn sec block"/></AuthLayout>;
-  else if(prof.mustChangePassword)body=<AuthLayout panel={false} title="Buat kata sandi baru" sub="Sandi sementara harus diganti dulu sebelum melanjutkan."><ChangePass uid={u.uid} force/></AuthLayout>;
+  else if(prof.mustChangePassword)body=<AuthLayout panel={false} title="Buat kata sandi baru" sub="Sandi sementara harus diganti dulu sebelum melanjutkan."><Suspense fallback={<Skeleton h={120} r={12}/>}><ChangePass uid={u.uid} force/></Suspense></AuthLayout>;
   else{const du=prof.dataUid||u.uid;
-    const search=<button type="button" className="ib" aria-label="Cari" title="Cari (tekan /)" onClick={()=>navigate('cari')}><Icon name="cari"/></button>;
+    const search=<><SyncStatus/><button type="button" className="ib" aria-label="Cari" title="Cari (tekan /)" onClick={()=>navigate('cari')}><Icon name="cari"/></button></>;
     const page=PAGES.includes(pg)?pg:'home',go=k=>navigate(k),late=x=>x.deadline&&x.deadline<todayStr()&&x.status!=='Selesai'?'Terlambat':null,auto=k=>page===k&&action==='baru',opn=k=>page===k?rid:null,done=()=>replaceRoute(page);
-    body=<AppShell nav={NAV} page={ALIAS[page]||page} onNavigate={go} identity={prof.nama} sub={'NIM '+prof.nim} onLogout={logoutUser} logoutOpts={LO} topSlot={search}><PwaBar/>
+    body=<SesiGate uid={u.uid}><AppShell nav={NAV} page={ALIAS[page]||page} onNavigate={go} identity={prof.nama} sub={'NIM '+prof.nim} onLogout={logoutUser} logoutOpts={LO} topSlot={search}><PwaBar/><PageBoundary key={page}><Suspense fallback={<PageSkeleton page={page} label={NAV.find(n=>n.k===(ALIAS[page]||page))?.label}/>}>
       {page==='home'&&<Dash uid={du} prof={prof} go={p=>navigate(...p.split('/'))}/>}
       {page==='bim'&&<Crud col="bimbingan" uid={du} title="Bimbingan" heading="Catatan Bimbingan" fields={BIM} titleKey="topik" subKeys={['tanggal','dosen','metode']} filters={[{key:'bab',label:'Bab',options:BAB},{key:'status',label:'Status',options:BIM[15].options},{key:'jenis',label:'Jenis',options:BIM[4].options},{key:'dosen',label:'Dosen',options:'data'}]} range="tanggal" statusKey="status" tones={BIM_TONE} archivable defaults={()=>({tanggal:todayStr(),status:'Terlaksana'})} autoNew={auto('bim')} onAutoNew={done} openId={opn('bim')} onOpenId={done}
         relations={[{col:'revisi',via:'bimbinganId',title:'Revisi dari bimbingan ini',titleKey:'catatan',sub:['status','deadline'],empty:'Belum ada revisi yang dicatat dari bimbingan ini.',add:x=>({bimbinganId:x.id,bab:x.bab||'',tanggal:x.tanggal||todayStr(),status:ST[0]})}]}
@@ -59,5 +57,5 @@ export default function App(){
       {page==='jjk'&&<Jejak uid={du} autoNew={auto('jjk')} onAutoNew={done} openId={opn('jjk')} onOpenId={done}/>}
       {page==='bantuan'&&<Bantuan/>}
       {page==='set'&&<Settings prof={prof} uid={u.uid}/>}
-    </AppShell>}
+    </Suspense></PageBoundary></AppShell></SesiGate>}
   return <>{body}<Splash ready={!boot}/><ToastHost/></>}

@@ -5,6 +5,7 @@ import {auth,db} from './firebase';
 import {getTheme,setTheme} from './shared/theme';
 import {Pass,Badge,Icon,ThemePick,PageHead,SessionCard,Btn,useFlash,AccountCard,InstallCard,Select,toast} from './shared/ui';
 import {OfflineCard,NotifControl} from './Device';
+import {SesiInfo} from './SesiGate';
 import {logoutUser,LO} from './offline';
 import {navigate} from '@shared/router';
 import {FORMATS,getDateFormat,setDateFormat,fmtDate} from '@shared/date';
@@ -30,6 +31,7 @@ export default function Settings({prof,uid}){
       <div className="field"><label>Format tanggal</label><Select label="Format tanggal" value={fmt} options={FMT_OPT} onChange={v=>{setDateFormat(v);setFmt(v);toast('Format tanggal: '+fmtDate('2026-11-25',v)+'. Berlaku di halaman yang dibuka berikutnya.')}}/></div></Sec>
     <Sec icon="lock" title="Keamanan"><ChangePass uid={uid}/></Sec>
     <SessionCard app="user"/>
+    <SesiInfo/>
     <OfflineCard/>
     <Sec icon="bell" title="Notifikasi"><NotifControl/></Sec>
     <InstallCard/>
