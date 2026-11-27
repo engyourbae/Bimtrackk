@@ -68,7 +68,7 @@ const FAQ=[{t:'Mengenal BIMTRACK',q:[
  {t:'Akun dan masuk',q:[
   ['Bagaimana cara mendaftar?','Pilih “Daftar” di bawah form masuk, isi data diri (langkah 1), lalu buat kata sandi (langkah 2). Setelah itu tunggu persetujuan admin; halaman akan terbuka sendiri begitu disetujui.'],
   ['Lupa kata sandi?','Pilih “Lupa kata sandi?” di form masuk, isi NIM dan nama lengkap. Admin memastikan identitasmu lalu memberi sandi sementara; kamu akan diminta menggantinya saat masuk.'],
-  ['Kenapa ada waktu tunggu saat salah sandi?','Untuk melindungi akunmu. Dua kali salah masih bebas; mulai kesalahan ketiga masuk dikunci sementara untuk NIM itu, mulai 15 detik lalu berlipat dua setiap salah (maksimum 1 jam). Hitungan kembali nol setelah berhasil masuk atau 24 jam tanpa salah. Pembatas ini bekerja di perangkat ini; Firebase tetap menjadi penjaga utama di server.'],
+  ['Kenapa ada waktu tunggu saat salah sandi?','Untuk melindungi akunmu. Dua kali salah masih bebas; mulai kesalahan ketiga masuk dikunci sementara untuk NIM itu, mulai 15 detik lalu berlipat dua setiap salah (maksimum 1 jam). Hitungan kembali nol setelah berhasil masuk atau 24 jam tanpa salah. Pembatas ini bekerja di perangkat ini, dan pengamanan akun tetap dijaga juga di sisi server.'],
   ['Bagaimana agar tidak masuk terus-menerus?','Hapus centang “Tetap masuk di perangkat ini” saat masuk (sesi berakhir saat peramban ditutup), dan/atau aktifkan “Kedaluwarsakan sesi otomatis” di Profil dan Pengaturan agar keluar sendiri setelah tidak aktif.']]},
  {t:'Data dan offline',q:[
   ['Bisakah dipakai tanpa internet?','Bisa untuk data yang sudah pernah dimuat. Catatan yang dibuat saat offline disimpan di perangkat dan tersinkron otomatis ketika online. Masuk pertama kali tetap memerlukan internet.'],
