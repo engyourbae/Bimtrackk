@@ -3,7 +3,7 @@ import {signInWithEmailAndPassword,createUserWithEmailAndPassword,setPersistence
 import {doc,setDoc,getDoc,addDoc,collection,serverTimestamp} from 'firebase/firestore';
 import {auth,db} from './firebase';
 import {nimEmail,validNim} from './shared/nim';
-import {AuthLayout,Field,Pass,Checkbox,Modal,Icon,toast,useLoginGuard,readGuard,LockNotice,Pager,InfoPanel,Onboarding,hasSeen,markSeen,consumeExpiredNotice} from './shared/ui';
+import {AuthLayout,Field,Pass,Checkbox,Modal,Icon,toast,useLoginGuard,readGuard,LockNotice,Pager,InfoPanel,Onboarding,hasSeen,markSeen,consumeExpiredNotice,resetSessionClock} from './shared/ui';
 import {parseHash} from '@shared/router';
 import {fmtWait} from '@shared/security';
 
@@ -28,8 +28,8 @@ export default function Auth(){
     if(mode==='reg'&&step===1){if(check(['nama','nim','prodi','fakultas','universitas']))setStep(2);return}
     if(mode==='login'&&readGuard(f.nim).until>Date.now())return;if(!check(mode==='login'?['nim','pw']:['pw','pw2']))return;setBusy(true);
     try{
-      if(mode==='login'){let v=1;try{const d=await getDoc(doc(db,'nimVersion',f.nim.trim().toLowerCase()));if(d.exists())v=d.data().v}catch{}await setPersistence(auth,keep?browserLocalPersistence:browserSessionPersistence).catch(()=>{});await signInWithEmailAndPassword(auth,nimEmail(f.nim,v),f.pw);lim.ok();markSeen()}
-      else{const c=await createUserWithEmailAndPassword(auth,nimEmail(f.nim),f.pw);
+      if(mode==='login'){let v=1;try{const d=await getDoc(doc(db,'nimVersion',f.nim.trim().toLowerCase()));if(d.exists())v=d.data().v}catch{}await setPersistence(auth,keep?browserLocalPersistence:browserSessionPersistence).catch(()=>{});resetSessionClock('user');await signInWithEmailAndPassword(auth,nimEmail(f.nim,v),f.pw);lim.ok();markSeen()}
+      else{resetSessionClock('user');const c=await createUserWithEmailAndPassword(auth,nimEmail(f.nim),f.pw);
         await setDoc(doc(db,'registrationRequests',c.user.uid),{uid:c.user.uid,nim:f.nim.trim(),nama:f.nama.trim(),prodi:f.prodi.trim(),fakultas:f.fakultas.trim(),universitas:f.universitas.trim(),status:'pending',createdAt:serverTimestamp()})}
     }catch(e){let m=friendly(e);if(mode==='login'&&LOGIN_ERR.test(e.code||'')){lim.fail(e.code==='auth/too-many-requests'?300:0);const g=readGuard(f.nim);if(g.until>Date.now())m='';else if(e.code!=='auth/too-many-requests')m+=` Salah ${g.n} dari 3 kali sebelum masuk dikunci sementara.`}if(e.code==='auth/email-already-in-use'){setStep(1);setErr({nim:m})}else setErr({form:m||undefined})}
     setBusy(false)};
