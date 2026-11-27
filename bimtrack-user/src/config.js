@@ -15,6 +15,8 @@ export const PAGE={bimbingan:'bim',revisi:'rev',fotoRevisi:'bkt',jadwal:'jdw',ru
 export const TITLEK={bimbingan:'topik',revisi:'catatan',fotoRevisi:'nama',jadwal:'agenda',rundown:'nama',dokumen:'nama',ringkasan:'scope'};
 export const REV_TONE={[ST[0]]:'neutral',[ST[1]]:'info',[ST[2]]:'warn',[ST[3]]:'danger',[ST[4]]:'ok'};
 export const BIM_TONE={Terlaksana:'ok',Dijadwalkan:'info',Dibatalkan:'neutral'};
+export const JDW_TONE={Direncanakan:'neutral','Menunggu konfirmasi':'warn',Dikonfirmasi:'info',Selesai:'ok',Dibatalkan:'danger','Dijadwalkan ulang':'warn'};
+export const RUN_TONE={'Belum mulai':'neutral',Berjalan:'info',Selesai:'ok'};
 export const DOK_TONE={Draft:'neutral',Dikirim:'info',Revisi:'warn',Final:'ok'};
 /** Teks pilihan untuk kolom relasi (type:'rel'). */
 export const REL_LABEL={bimbingan:x=>[fmtDate(x.tanggal),x.topik].filter(Boolean).join(' · '),revisi:x=>[x.bab||'Umum',(x.catatan||'').slice(0,60)].filter(Boolean).join(' · ')};

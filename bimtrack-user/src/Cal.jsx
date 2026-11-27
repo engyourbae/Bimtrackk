@@ -1,9 +1,16 @@
 import {useState} from 'react';
-import {Badge} from './shared/ui';
-export default function Cal({rows}){
-  const[m,setM]=useState(()=>{const d=new Date();return new Date(d.getFullYear(),d.getMonth(),1)}),[sel,setSel]=useState('');
-  const y=m.getFullYear(),mo=m.getMonth(),first=new Date(y,mo,1).getDay(),days=new Date(y,mo+1,0).getDate(),pad=n=>String(n).padStart(2,'0'),key=d=>`${y}-${pad(mo+1)}-${pad(d)}`;
-  const cells=[...Array(first).fill(null),...Array.from({length:days},(_,i)=>i+1)],day=rows.filter(r=>r.tanggal===sel);
-  return <div className="card"><div className="row"><button className="ib" onClick={()=>setM(new Date(y,mo-1,1))} aria-label="Bulan sebelumnya">‹</button><b className="sp" style={{textAlign:'center'}}>{m.toLocaleDateString('id-ID',{month:'long',year:'numeric'})}</b><button className="ib" onClick={()=>setM(new Date(y,mo+1,1))} aria-label="Bulan berikutnya">›</button></div>
-    <div className="cal">{['M','S','S','R','K','J','S'].map((d,i)=><span key={i} className="mut">{d}</span>)}{cells.map((d,i)=>d?<button key={i} className={'day'+(sel===key(d)?' on':'')} onClick={()=>setSel(key(d))}>{d}{rows.some(r=>r.tanggal===key(d))&&<i/>}</button>:<span key={i}/>)}</div>
-    {sel&&(day.length?day.map(r=><p key={r.id} style={{margin:'6px 0'}}><b>{r.jam||'--:--'}</b> {r.agenda} · {r.dosen} <Badge>{r.status}</Badge></p>):<p className="mut">Tidak ada jadwal pada {sel}.</p>)}</div>}
+import {Badge,Icon} from './shared/ui';
+import {monthGrid,toIso,todayStr,BULAN,fmtDate} from '@shared/date';
+import {JDW_TONE} from './config';
+import {byWhen} from './schedule';
+/** Kalender bulanan (minggu mulai Senin, sama dengan pemilih tanggal). rows: jadwal; onOpen(id) membuka detail. */
+export default function Cal({rows,onOpen}){
+  const[m,setM]=useState(()=>{const d=new Date();return{y:d.getFullYear(),m:d.getMonth()}}),[sel,setSel]=useState(''),today=todayStr(),
+    nav=n=>setM(({y,m})=>{const d=new Date(y,m+n,1);return{y:d.getFullYear(),m:d.getMonth()}}),
+    cnt=Object.create(null);rows.forEach(r=>{if(r.tanggal)cnt[r.tanggal]=(cnt[r.tanggal]||0)+1});
+  const day=rows.filter(r=>r.tanggal===sel).sort(byWhen);
+  return <div className="card"><div className="row"><button type="button" className="ib" onClick={()=>nav(-1)} aria-label="Bulan sebelumnya"><Icon name="chev-left"/></button><b className="sp" style={{textAlign:'center'}} aria-live="polite">{BULAN[m.m]} {m.y}</b><button type="button" className="ib" onClick={()=>nav(1)} aria-label="Bulan berikutnya"><Icon name="chev-right"/></button></div>
+    <div className="cal cal-h" aria-hidden="true">{['Sen','Sel','Rab','Kam','Jum','Sab','Min'].map(d=><span key={d} className="mut">{d}</span>)}</div>
+    <div className="cal">{monthGrid(m.y,m.m).map(c=><button type="button" key={c.date} className={'day'+(sel===c.date?' on':'')+(c.date===today?' today':'')+(c.inMonth?'':' out')} aria-pressed={sel===c.date} aria-label={fmtDate(c.date,'panjang')+(cnt[c.date]?`, ${cnt[c.date]} jadwal`:'')} onClick={()=>setSel(sel===c.date?'':c.date)}>{c.day}{!!cnt[c.date]&&<i/>}</button>)}</div>
+    <div className="row" style={{justifyContent:'space-between'}}><button type="button" className="btn ghost sm" onClick={()=>{const d=new Date();setM({y:d.getFullYear(),m:d.getMonth()});setSel(toIso(d))}}>Hari ini</button></div>
+    {sel&&<div className="cal-day"><div className="eyebrow">{fmtDate(sel,'panjang')}</div>{day.length?day.map(r=><button type="button" key={r.id} className="wk-i" onClick={()=>onOpen?.(r.id)}><b>{r.jam||'--:--'}</b><span className="wk-t"><span>{r.agenda}</span><small className="mut">{[r.dosen,r.lokasi].filter(Boolean).join(' · ')}</small></span>{r.status&&<Badge tone={JDW_TONE[r.status]||'neutral'}>{r.status}</Badge>}</button>):<p className="mut" style={{margin:'6px 0 0'}}>Tidak ada jadwal pada tanggal ini.</p>}</div>}</div>}

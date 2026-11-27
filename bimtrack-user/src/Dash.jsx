@@ -1,11 +1,12 @@
 import {useEffect,useState} from 'react';
 import {collection,onSnapshot,query,where} from 'firebase/firestore';
 import {db} from './firebase';
-import {Icon,Badge,Progress,Modal,EmptyState,Skeleton,Timeline} from './shared/ui';
+import {Icon,Badge,Progress,EmptyState,Skeleton,Timeline} from './shared/ui';
 import {todayStr,fmtDate,relDay,relTime,sapaan,hariPanjang} from '@shared/date';
 import {calcProgress,nextStep,urgentRevisi,STATUS_TONE} from './progress';
+import Formula from './Formula';
 const COLS=['bimbingan','revisi','jadwal','rundown','dokumen','ringkasan'];
-const QA=[['Bimbingan','bimbingan','bim/baru'],['Revisi','revisi','rev/baru'],['Jadwal','jadwal','jdw/baru'],['Rundown','rundown','run/baru'],['Dokumen','dokumen','dok/baru'],['Link Drive','link','bkt/baru'],['Ringkasan','ringkasan','rin']];
+const QA=[['Catatan','bimbingan','bim/baru'],['Revisi','revisi','rev/baru'],['Jadwal','jadwal','jdw/baru'],['Rundown','rundown','run/baru'],['Dokumen','dokumen','dok/baru'],['Bukti','image','bkt/baru'],['Laporan','laporan','rin'],['Perjalanan','route','prog']];
 const ACT={bimbingan:['bimbingan','Bimbingan',x=>x.topik],revisi:['revisi','Revisi',x=>x.catatan],dokumen:['dokumen','Dokumen',x=>x.nama],ringkasan:['ringkasan','Catatan ringkasan',x=>x.scope]};
 const ts=x=>(x.updatedAt||x.createdAt)?.seconds??Date.now()/1000;
 export default function Dash({uid,prof,go}){
@@ -22,7 +23,7 @@ export default function Dash({uid,prof,go}){
       <div className="dash-col">
         <section className={'card next '+nx.tone} aria-label="Langkah berikutnya"><div className="eyebrow">Langkah berikutnya</div><h2>{nx.title}</h2><p>{nx.detail}</p><button type="button" className="btn" onClick={()=>go(nx.to)}>{nx.cta} <Icon name="chev-right" size={18}/></button></section>
         <section aria-label="Aksi cepat"><div className="qa">{QA.map(([l,ic,to])=><button type="button" key={to} className="qa-i" onClick={()=>go(to)}><span className="qa-c"><Icon name={ic} size={20}/></span>{l}</button>)}</div></section>
-        <section className="card" aria-label="Progres skripsi"><div className="sec-h"><h2>Progres skripsi</h2><button type="button" className="btn ghost sm" onClick={()=>setHow(true)}><Icon name="info" size={16}/> Cara menghitung</button></div>
+        <section className="card" aria-label="Progres skripsi"><div className="sec-h"><h2>Progres skripsi</h2><div className="row"><button type="button" className="btn ghost sm" onClick={()=>setHow(true)}><Icon name="info" size={16}/> Cara menghitung</button><button type="button" className="btn ghost sm" onClick={()=>go('prog')}>Perjalanan <Icon name="chev-right" size={16}/></button></div></div>
           <div className="big"><b className="num">{P.overall}%</b><span>dari Bab I sampai Bab V</span></div><Progress value={P.overall} size="lg" label="Progres keseluruhan"/>
           <div className="babs">{P.babs.map(b=><div className="bab-r" key={b.bab}><div className="top"><b>{b.bab}</b><Badge tone={STATUS_TONE[b.status]}>{b.status}</Badge><span className="pc">{b.pct}%</span></div><Progress value={b.pct} label={'Progres '+b.bab}/>
             <small>{b.discussed?'Sudah dibahas':'Belum dibahas'} · Revisi {b.rev.done}/{b.rev.total} · Kegiatan {b.run.done}/{b.run.total}{b.late?` · ${b.late} terlambat`:''}</small></div>)}</div>
@@ -36,11 +37,5 @@ export default function Dash({uid,prof,go}){
         <section className="card" aria-label="Aktivitas terbaru"><div className="sec-h"><h2>Aktivitas terbaru</h2></div>
           {act.length?<Timeline items={act.map(a=>({key:a.key,icon:a.icon,title:a.title.length>60?a.title.slice(0,60)+'…':a.title,meta:`${a.lbl} · ${relTime(a.t)}`}))}/>:<EmptyState compact title="Belum ada aktivitas" text="Bimbingan, revisi, dokumen, dan catatan terbaru akan tampil di sini."/>}</section>
       </div></div>
-    <Modal open={how} title="Cara menghitung progres" onClose={()=>setHow(false)}><div className="formula">
-      <p>Progres dihitung dari datamu sendiri, per bab (Bab I sampai Bab V):</p>
-      <ul><li><b>20%</b> jika sudah ada bimbingan berstatus <i>Terlaksana</i> yang membahas bab itu.</li><li><b>80%</b> dari rata-rata skor revisi dan skor kegiatan rundown bab itu. Jika salah satunya tidak ada, yang ada saja yang dipakai.</li></ul>
-      <p><b>Skor revisi:</b> Selesai dan disetujui 1 · Menunggu pemeriksaan 0,75 · Sedang dikerjakan 0,4 · Perlu revisi ulang 0,2 · Belum dikerjakan 0.</p>
-      <p><b>Skor rundown:</b> Selesai 1 · Berjalan 0,5 · Belum mulai 0.</p>
-      <p><b>Progres keseluruhan</b> adalah rata-rata kelima bab. Bab tanpa data dihitung 0%.</p>
-      <p><b>Status bab:</b> Selesai (100%) · Perlu perhatian (ada revisi ulang atau yang terlambat) · Siap diperiksa (semua revisi menunggu pemeriksaan atau selesai) · Dalam proses · Belum dimulai.</p></div></Modal>
+    <Formula open={how} onClose={()=>setHow(false)}/>
   </div>}

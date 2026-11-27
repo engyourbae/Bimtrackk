@@ -13,7 +13,7 @@ const iso=v=>{v=(v||'').trim();const m=v.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d
 const save=(name,text,type)=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)};
 const names=Object.keys(COLS).map(k=>COLS[k].t),keyOf=t=>Object.keys(COLS).find(k=>COLS[k].t===t),today=todayStr;
 const load=(c,uid)=>getDocs(query(collection(db,c),where('ownerUid','==',uid))).then(s=>s.docs.map(d=>d.data()));
-export default function ImportExport({uid}){
+export default function ImportExport({uid,embedded}){
   const[tab,setTab]=useState('Ekspor'),[col,setCol]=useState('Bimbingan'),[rows,setRows]=useState([]),[sel,setSel]=useState({}),[from,setFrom]=useState(''),[to,setTo]=useState(''),[delim,setDelim]=useState('Titik koma (Excel Indonesia)');
   const[csv,setCsv]=useState(null),[map,setMap]=useState({}),[busy,setBusy]=useState(false),[logs,setLogs]=useState([]);
   const k=keyOf(col),F=COLS[k].f,cols=F.filter(f=>sel[f.k]!==false),D=delim.startsWith('Titik')?';':',';
@@ -32,7 +32,7 @@ export default function ImportExport({uid}){
     toast(`${A.ok.length} baris diimpor`);setCsv(null);load(k,uid).then(setRows)}catch(e){await Promise.all(made.map(r=>deleteDoc(r).catch(()=>{})));toast('Impor gagal dan dibatalkan (rollback): '+e.message,'err')}setBusy(false)};
   const backup=async()=>{setBusy(true);try{const out={app:'BIMTRACK',ownerUid:uid,createdAt:new Date().toISOString()},counts={};for(const c of Object.keys(COLS)){out[c]=await load(c,uid);counts[c]=out[c].length}
     save(`bimtrack-backup-${today()}.json`,JSON.stringify(out,null,1),'application/json');const id=doc(collection(db,'backupLogs')).id;setDoc(doc(db,'backupLogs',id),{id,ownerUid:uid,tipe:'json',counts,status:'berhasil',createdAt:serverTimestamp(),updatedAt:serverTimestamp()}).catch(()=>{});toast('Backup diunduh')}catch(e){toast(e.message,'err')}setBusy(false)};
-  return <div><h1>CSV dan Backup</h1><div className="row" style={{marginBottom:12}}>{['Ekspor','Impor','Backup'].map(t=><button key={t} className={'btn '+(tab===t?'':'sec')} onClick={()=>setTab(t)}>{t}</button>)}</div>
+  return <div>{!embedded&&<h1>CSV dan Backup</h1>}<div className="row" style={{marginBottom:12}}>{['Ekspor','Impor','Backup'].map(t=><button key={t} className={'btn '+(tab===t?'':'sec')} onClick={()=>setTab(t)}>{t}</button>)}</div>
     {tab!=='Backup'&&<div className="fld"><label>Data</label><Select value={col} options={names} onChange={v=>{setCol(v);setSel({});setCsv(null)}}/></div>}
     {tab==='Ekspor'&&<><div className="fld"><label>Pemisah kolom</label><Select value={delim} options={['Titik koma (Excel Indonesia)','Koma']} onChange={setDelim}/></div>
       <div className="row" style={{marginBottom:10}}><div style={{flex:1,minWidth:140}}><DatePicker label="Dari tanggal" placeholder="Dari tanggal" value={from} onChange={setFrom}/></div><div style={{flex:1,minWidth:140}}><DatePicker label="Sampai tanggal" placeholder="Sampai tanggal" value={to} onChange={setTo}/></div></div>

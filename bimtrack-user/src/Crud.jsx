@@ -1,8 +1,8 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
 import {collection,doc,onSnapshot,query,where,setDoc,updateDoc,deleteDoc,serverTimestamp} from 'firebase/firestore';
 import {db} from './firebase';
-import {Modal,Select,StatusSelect,Segmented,DatePicker,TimePicker,Badge,Icon,PageHead,EmptyState,SkeletonList,Pagination,usePager,Menu,ContextMenu,Timeline,toast} from './shared/ui';
-import {fmtDate,todayStr} from '@shared/date';
+import {Modal,Select,StatusSelect,Segmented,DatePicker,TimePicker,Badge,Icon,PageHead,EmptyState,SkeletonList,Pagination,usePager,Menu,ContextMenu,Timeline,ConfirmDialog,toast} from './shared/ui';
+import {fmtDate,todayStr,relDay,BULAN,BULAN_S} from '@shared/date';
 import {navigate} from '@shared/router';
 import {PAGE,REL_LABEL} from './config';
 import {parseDrive,isDriveUrl} from './drive';
@@ -12,6 +12,12 @@ const ls=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);localStorag
 /** Titip data awal untuk formulir "Tambah" di halaman lain (relasi antar data). */
 export const setPrefill=(col,data)=>{try{sessionStorage.setItem('bimtrack-prefill:'+col,JSON.stringify(data))}catch{}};
 const takePrefill=col=>{try{const k='bimtrack-prefill:'+col,v=sessionStorage.getItem(k);sessionStorage.removeItem(k);return v?JSON.parse(v):{}}catch{return{}}};
+
+/** Titip filter awal untuk halaman daftar (mis. dari Perjalanan Skripsi: hanya Bab II). */
+export const setFilter=(col,data)=>{try{sessionStorage.setItem('bimtrack-filter:'+col,JSON.stringify(data))}catch{}};
+const takeFilter=col=>{try{const k='bimtrack-filter:'+col,v=sessionStorage.getItem(k);sessionStorage.removeItem(k);return v?JSON.parse(v):{}}catch{return{}}};
+/** Umpan balik simpan yang jujur: Firestore menyimpan di perangkat dulu, lalu sinkron saat online. */
+const savedMsg=()=>typeof navigator!=='undefined'&&navigator.onLine===false?'Tersimpan di perangkat. Akan disinkronkan saat online.':'Tersimpan';
 
 function useCols(cols,uid){
   const[m,setM]=useState({}),key=cols.join();
@@ -30,12 +36,12 @@ function Thumb({url}){
   const t=parseDrive(url)?.thumb,[bad,setBad]=useState(false);
   return t&&!bad?<img className="gal-i" src={t} alt="" loading="lazy" referrerPolicy="no-referrer" onError={()=>setBad(true)}/>:<span className="gal-i ph"><Icon name="image" size={28}/></span>}
 
-export default function Crud({col,uid,title,fields,titleKey,subKeys,filters=[],sortKey='tanggal',urlKey,badge,header,autoNew,onAutoNew,openId,onOpenId,
-  statusKey,tones={},history,doneStatus,doneKey,defaults,relations=[],actions=[],archivable,views=['list'],groupKey,range}){
-  const[rows,setRows]=useState(null),[q,setQ]=useState(''),[fv,setFv]=useState({}),[rg,setRg]=useState({}),[desc,setDesc]=useState(true),[showF,setShowF]=useState(false),
+export default function Crud({col,uid,title,heading,listTitle,embedded,fields,titleKey,subKeys,filters=[],sortKey='tanggal',urlKey,badge,header,autoNew,onAutoNew,openId,onOpenId,
+  statusKey,tones={},history,doneStatus,doneKey,defaults,relations=[],actions=[],archivable,views=['list'],groupKey,range,scope,scopeKey='',descDefault=true,timeKey,sortLabels=['Terbaru','Terlama']}){
+  const[rows,setRows]=useState(null),[q,setQ]=useState(''),[fv,setFv]=useState(()=>takeFilter(col)),[rg,setRg]=useState({}),[desc,setDesc]=useState(descDefault),[showF,setShowF]=useState(false),
     [tab,setTab]=useState('aktif'),[view,setView]=useState(()=>{const v=ls('bimtrack-view-'+col);return views.includes(v)?v:views[0]}),
     [form,setForm]=useState(null),[errs,setErrs]=useState({}),[askClose,setAskClose]=useState(false),[del,setDel]=useState(null),[det,setDet]=useState(null),[prev,setPrev]=useState(null);
-  const init=useRef('');
+  const init=useRef(''),delRef=useRef(null);
   const relCols=useMemo(()=>[...new Set([...fields.filter(f=>f.type==='rel').map(f=>f.col),...relations.map(r=>r.col)])],[fields,relations]);
   const rel=useCols(relCols,uid);
   useEffect(()=>onSnapshot(query(collection(db,col),where('ownerUid','==',uid)),s=>setRows(s.docs.map(d=>d.data())),e=>toast(e.message,'err')),[col,uid]);
@@ -46,10 +52,12 @@ export default function Crud({col,uid,title,fields,titleKey,subKeys,filters=[],s
   const optsOf=f=>f.options&&f.options!=='data'?f.options:[...new Set((rows||[]).map(r=>r[f.key]).filter(Boolean))].sort();
   const dateKey=range;
   const list=useMemo(()=>{if(!rows)return[];const ql=q.toLowerCase();
-    const r=rows.filter(x=>(archivable?(tab==='arsip')===!!x.archived:true)&&filters.every(f=>!fv[f.key]||x[f.key]===fv[f.key])&&(!dateKey||((!rg.from||(x[dateKey]||'')>=rg.from)&&(!rg.to||(x[dateKey]||'')<=rg.to)))&&(!ql||fields.some(f=>String(x[f.k]||'').toLowerCase().includes(ql))));
-    r.sort((a,b)=>((a[sortKey]||'')<(b[sortKey]||'')?-1:1)*(desc?-1:1));return r},[rows,q,fv,rg,desc,tab]);// eslint-disable-line
+    const r=rows.filter(x=>(!scope||scope(x))&&(archivable?(tab==='arsip')===!!x.archived:true)&&filters.every(f=>!fv[f.key]||x[f.key]===fv[f.key])&&(!dateKey||((!rg.from||(x[dateKey]||'')>=rg.from)&&(!rg.to||(x[dateKey]||'')<=rg.to)))&&(!ql||fields.some(f=>String(x[f.k]||'').toLowerCase().includes(ql))));
+    r.sort((a,b)=>{const x=a[sortKey]||'',y=b[sortKey]||'';if(!x!==!y)return x?-1:1;return(x<y?-1:x>y?1:0)*(desc?-1:1)});return r},[rows,q,fv,rg,desc,tab,scopeKey]);// eslint-disable-line
+  useEffect(()=>{setDesc(descDefault)},[scopeKey]);// eslint-disable-line
+  if(del)delRef.current=del;
   const pg=usePager(list,20),set=k=>v=>{setForm(s=>({...s,[k]:v}));setErrs(e=>({...e,[k]:undefined}))};
-  useEffect(()=>{pg.setPage(1)},[q,fv,rg,desc,tab,view]);// eslint-disable-line
+  useEffect(()=>{pg.setPage(1)},[q,fv,rg,desc,tab,view,scopeKey]);// eslint-disable-line
   const nf=Object.values(fv).filter(Boolean).length+(rg.from||rg.to?1:0),filtered=!!(q||nf);
   const relLabel=(c,id)=>{const r=(rel[c]||[]).find(x=>x.id===id);return r?REL_LABEL[c](r):null};
   const relOpts=f=>{const r=[...(rel[f.col]||[])].sort((a,b)=>((a.tanggal||'')<(b.tanggal||'')?1:-1)),o=[{value:'',label:'Tidak ada'},...r.map(x=>({value:x.id,label:REL_LABEL[f.col](x)}))];const cur=form?.[f.k];if(cur&&!r.some(x=>x.id===cur))o.push({value:cur,label:'(data tidak ditemukan)'});return o};
@@ -65,40 +73,53 @@ export default function Crud({col,uid,title,fields,titleKey,subKeys,filters=[],s
     const prevRow=form.id?rows.find(r=>r.id===form.id):null,id=form.id||doc(collection(db,col)).id,data={};fields.forEach(x=>data[x.k]=(form[x.k]||'').trim());
     if(history&&statusKey){data._wasDone=prevRow?.[statusKey]===doneStatus;doneFix(data,data[statusKey]);if(data[statusKey])data.riwayat=histOf(prevRow,data[statusKey]);else if(prevRow?.riwayat)data.riwayat=prevRow.riwayat}
     const p=form.id?updateDoc(doc(db,col,id),{...data,updatedAt:serverTimestamp()}):setDoc(doc(db,col,id),{...data,id,ownerUid:uid,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
-    p.catch(er=>toast(er.message,'err'));setForm(null);toast('Tersimpan (sinkron otomatis saat online)')};
+    p.catch(er=>toast(er.message,'err'));setForm(null);toast(savedMsg())};
   const closeForm=()=>{if(JSON.stringify(form)!==init.current)setAskClose(true);else setForm(null)};
-  const remove=()=>{deleteDoc(doc(db,col,del.id)).catch(e=>toast(e.message,'err'));setDel(null);setDet(null);toast('Dihapus')};
+  const remove=()=>{const x=del;deleteDoc(doc(db,col,x.id)).catch(e=>toast(e.message,'err'));setDel(null);setDet(null);toast('Dihapus: '+((x[titleKey]||'data').slice(0,40)))};
   const setStatus=(x,s)=>{const d={[statusKey]:s,updatedAt:serverTimestamp()};if(history)d.riwayat=histOf(x,s);if(doneKey){const dd={[doneKey]:x[doneKey]||'',_wasDone:x[statusKey]===doneStatus};doneFix(dd,s);d[doneKey]=dd[doneKey]}
-    updateDoc(doc(db,col,x.id),d).catch(e=>toast(e.message,'err'));setDet(v=>v&&v.id===x.id?{...v,...d,updatedAt:undefined}:v);toast('Status diperbarui')};
-  const archive=x=>{updateDoc(doc(db,col,x.id),{archived:!x.archived,updatedAt:serverTimestamp()}).catch(e=>toast(e.message,'err'));setDet(null);toast(x.archived?'Dipulihkan dari arsip':'Dipindahkan ke arsip')};
+    updateDoc(doc(db,col,x.id),d).catch(e=>toast(e.message,'err'));setDet(v=>v&&v.id===x.id?{...v,...d,updatedAt:undefined}:v);toast('Status diubah ke “'+s+'”')};
+  const archive=x=>{const was=!!x.archived;updateDoc(doc(db,col,x.id),{archived:!was,updatedAt:serverTimestamp()}).catch(e=>toast(e.message,'err'));setDet(null);
+    toast(was?'Dipulihkan dari arsip':'Dipindahkan ke arsip','ok',{label:'Urungkan',onClick:()=>updateDoc(doc(db,col,x.id),{archived:was,updatedAt:serverTimestamp()}).catch(e=>toast(e.message,'err'))})};
   const acts=x=>[{label:'Lihat detail',icon:'eye',onClick:()=>setDet(x)},{label:'Edit',icon:'pencil',onClick:()=>openForm(x)},...(urlKey&&parseDrive(x[urlKey])?.preview?[{label:'Pratinjau',icon:'image',onClick:()=>setPrev(x)}]:[]),
     ...(archivable?[{label:x.archived?'Pulihkan dari arsip':'Arsipkan',icon:'arsip',onClick:()=>archive(x)}]:[]),{sep:true},{label:'Hapus',icon:'trash',danger:true,onClick:()=>setDel(x)}];
   const pickView=v=>{setView(v);ls('bimtrack-view-'+col,v)};
-  const VL={list:{value:'list',label:'Daftar',icon:'list'},gallery:{value:'gallery',label:'Galeri',icon:'image'},group:{value:'group',label:'Per kategori',icon:'grid'}};
+  const VL={list:{value:'list',label:'Daftar',icon:'list'},gallery:{value:'gallery',label:'Galeri',icon:'image'},group:{value:'group',label:'Per kategori',icon:'grid'},board:{value:'board',label:'Papan',icon:'board'},timeline:{value:'timeline',label:'Linimasa',icon:'timeline'}};
   const badgeVal=x=>statusKey&&x[statusKey]?<Badge tone={tones[x[statusKey]]||'neutral'}>{x[statusKey]}</Badge>:(filters[0]&&x[filters[0].key]?<Badge>{x[filters[0].key]}</Badge>:null);
   const Card=x=><ContextMenu key={x.id} items={acts(x)}><div className="card clk" onClick={()=>setDet(x)}><div className="row"><b className="sp">{x[titleKey]||'-'}</b>{badgeVal(x)}{badge&&badge(x)&&<Badge tone="danger">{badge(x)}</Badge>}<Menu items={acts(x)} label={'Tindakan untuk '+(x[titleKey]||'data')}/></div>
     <div className="mut" style={{fontSize:'var(--fs-sm)'}}>{subKeys.map(k=>show(fields,k,x[k])).filter(Boolean).join(' · ')}</div></div></ContextMenu>;
   const GCard=x=><ContextMenu key={x.id} items={acts(x)}><div className="gal-c" onClick={()=>setDet(x)} role="button" tabIndex={0} onKeyDown={e=>(e.key==='Enter'||e.key===' ')&&(e.preventDefault(),setDet(x))}><Thumb url={x[urlKey]}/><div className="gal-t"><b>{x[titleKey]||'-'}</b><span className="mut">{subKeys.map(k=>show(fields,k,x[k])).filter(Boolean).join(' · ')}</span></div></div></ContextMenu>;
+  const boardOpts=statusKey?fields.find(f=>f.k===statusKey)?.options||[]:[],tone0=o=>tones[o]==='neutral'?'':tones[o]||'';
+  const BCard=x=>{const cur=x[statusKey]||boardOpts[0],mv=boardOpts.filter(o=>o!==cur).map(o=>({label:'Pindahkan ke “'+o+'”',icon:'chev-right',onClick:()=>setStatus(x,o)}));
+    return <ContextMenu key={x.id} items={[...mv,{sep:true},...acts(x)]}><div className="card clk bc" onClick={()=>setDet(x)}><div className="row"><b className="sp">{x[titleKey]||'-'}</b>{badge&&badge(x)&&<Badge tone="danger">{badge(x)}</Badge>}<Menu items={[...mv,{sep:true},...acts(x)]} label={'Tindakan untuk '+(x[titleKey]||'data')}/></div>
+      <div className="mut" style={{fontSize:'var(--fs-sm)'}}>{subKeys.map(k=>show(fields,k,x[k])).filter(Boolean).join(' · ')}</div></div></ContextMenu>};
   const body=()=>{
+    if(view==='board')return <div className="board">{boardOpts.map(o=>{const items=list.filter(x=>(x[statusKey]||boardOpts[0])===o);
+      return <section className="bcol" key={o} aria-label={o}><div className="bcol-h"><i className={'dot '+tone0(o)}/><h3>{o}</h3><Badge>{items.length}</Badge></div>{items.length?items.map(BCard):<p className="bcol-e">Tidak ada data di kolom ini.</p>}</section>})}</div>;
+    if(view==='timeline'){const k=timeKey||sortKey,dated=list.filter(x=>x[k]).sort((a,b)=>a[k]<b[k]?-1:a[k]>b[k]?1:0),undated=list.filter(x=>!x[k]),g=[];
+      dated.forEach(x=>{const m=x[k].slice(0,7),l=g[g.length-1];if(l&&l.m===m)l.items.push(x);else g.push({m,items:[x]})});
+      const Row=x=>{const t=x[k];return <div className="tlv" key={x.id}><div className="tlv-d">{t?<><b>{+t.slice(8,10)}</b><span>{BULAN_S[+t.slice(5,7)-1]}</span><small>{relDay(t)}</small></>:<span>–</span>}</div>{Card(x)}</div>};
+      return <>{g.map(z=><section key={z.m} className="grp"><div className="sec-h"><h2>{BULAN[+z.m.slice(5,7)-1]} {z.m.slice(0,4)}</h2><Badge>{z.items.length}</Badge></div>{z.items.map(Row)}</section>)}
+        {undated.length>0&&<section className="grp"><div className="sec-h"><h2>Tanpa tanggal</h2><Badge>{undated.length}</Badge></div>{undated.map(Row)}</section>}</>}
     if(view==='gallery')return <div className="gal">{pg.slice.map(GCard)}</div>;
     if(view==='group'){const g={};pg.slice.forEach(x=>{(g[x[groupKey]||'Tanpa kategori']=g[x[groupKey]||'Tanpa kategori']||[]).push(x)});return Object.keys(g).sort().map(k=><section key={k} className="grp"><div className="sec-h"><h2>{k}</h2><Badge>{g[k].length}</Badge></div>{g[k].map(Card)}</section>)}
     return pg.slice.map(Card)};
 
   return <div>
-    <PageHead title={title} actions={<button type="button" className="btn" onClick={()=>openForm()}><Icon name="plus" size={18}/> Tambah</button>}/>
+    {embedded?<div className="sec-h"><h2>{listTitle||title}</h2><button type="button" className="btn" onClick={()=>openForm()}><Icon name="plus" size={18}/> Tambah</button></div>
+      :<PageHead title={heading||title} actions={<button type="button" className="btn" onClick={()=>openForm()}><Icon name="plus" size={18}/> Tambah</button>}/>}
     {header&&header(rows||[])}
     {archivable&&<div style={{marginBottom:'var(--s3)'}}><Segmented label="Tampilkan" value={tab} onChange={setTab} options={[{value:'aktif',label:'Aktif'},{value:'arsip',label:'Arsip',icon:'arsip'}]}/></div>}
     <div className="toolbar">
       <div className="search"><Icon name="cari"/><input className="in" placeholder="Cari..." aria-label={'Cari '+title.toLowerCase()} value={q} onChange={e=>setQ(e.target.value)}/></div>
       {(filters.length>0||dateKey)&&<button type="button" className="btn sec" onClick={()=>setShowF(true)} aria-label="Buka filter"><Icon name="filter" size={18}/> Filter{nf>0&&<span className="cnt">{nf}</span>}</button>}
-      <button type="button" className="btn sec" onClick={()=>setDesc(!desc)} aria-label="Ubah urutan"><Icon name="sort" size={18}/> {desc?'Terbaru':'Terlama'}</button>
+      <button type="button" className="btn sec" onClick={()=>setDesc(!desc)} aria-label="Ubah urutan"><Icon name="sort" size={18}/> {desc?sortLabels[0]:sortLabels[1]}</button>
       {views.length>1&&<Segmented label="Tampilan" value={view} onChange={pickView} options={views.map(v=>VL[v])}/>}</div>
     {nf>0&&<div className="fchips">{filters.filter(f=>fv[f.key]).map(f=><button type="button" className="fchip" key={f.key} onClick={()=>setFv(s=>({...s,[f.key]:''}))}>{f.label}: {fv[f.key]} <Icon name="x" size={14}/><span className="sr">Hapus filter</span></button>)}
       {(rg.from||rg.to)&&<button type="button" className="fchip" onClick={()=>setRg({})}>{rg.from?fmtDate(rg.from,'sedang'):'…'} – {rg.to?fmtDate(rg.to,'sedang'):'…'} <Icon name="x" size={14}/><span className="sr">Hapus filter tanggal</span></button>}
       <button type="button" className="btn ghost sm" onClick={()=>{setFv({});setRg({})}}>Reset semua</button></div>}
     {rows!==null&&filtered&&<p className="mut cnt-l">{list.length} data ditemukan</p>}
     {rows===null?<SkeletonList n={3}/>:!list.length?<EmptyState title={filtered?'Tidak ada hasil':tab==='arsip'?'Arsip kosong':'Belum ada '+title.toLowerCase()} text={filtered?'Coba ubah kata kunci atau filter.':tab==='arsip'?'Data yang diarsipkan akan muncul di sini.':'Data yang kamu tambahkan akan muncul di sini.'} action={filtered?<button type="button" className="btn sec" onClick={()=>{setQ('');setFv({});setRg({})}}>Hapus pencarian dan filter</button>:tab==='aktif'&&<button type="button" className="btn" onClick={()=>openForm()}><Icon name="plus" size={18}/> Tambah {title.toLowerCase()}</button>}/>:<>
-      {body()}<Pagination page={pg.page} pages={pg.pages} onPage={pg.setPage} total={pg.total}/></>}
+      {body()}{view!=='board'&&view!=='timeline'&&<Pagination page={pg.page} pages={pg.pages} onPage={pg.setPage} total={pg.total}/>}</>}
 
     <Modal open={showF} title="Filter" onClose={()=>setShowF(false)} footer={<div className="row"><button type="button" className="btn sec sp" onClick={()=>{setFv({});setRg({})}}>Reset</button><button type="button" className="btn sp" onClick={()=>setShowF(false)}>Tampilkan {list.length} data</button></div>}>
       {filters.map(f=><div className="field" key={f.key}><label>{f.label}</label><Select label={f.label} value={fv[f.key]||''} placeholder={'Semua '+f.label.toLowerCase()} options={[{value:'',label:'Semua'},...optsOf(f).map(o=>({value:o,label:o}))]} onChange={v=>setFv(s=>({...s,[f.key]:v}))}/></div>)}
@@ -129,6 +150,7 @@ export default function Crud({col,uid,title,fields,titleKey,subKeys,filters=[],s
         {er&&<div className="err" role="alert">{er}</div>}
         {dup&&<div className="hint">Link yang sama sudah dipakai di "{dup[titleKey]}".</div>}</div>})}</Modal>
     <Modal open={askClose} title="Buang perubahan?" onClose={()=>setAskClose(false)}><p>Isian yang belum disimpan akan hilang.</p><div className="row"><button type="button" className="btn sec sp" onClick={()=>setAskClose(false)}>Lanjut mengisi</button><button type="button" className="btn dan sp" onClick={()=>{setAskClose(false);setForm(null)}}>Buang</button></div></Modal>
-    <Modal open={!!del} title="Hapus data?" onClose={()=>setDel(null)}><p>Data ini akan dihapus permanen dan tidak bisa dikembalikan.{archivable&&' Jika hanya ingin menyembunyikan, gunakan Arsipkan.'}</p><div className="row"><button type="button" className="btn sec sp" onClick={()=>setDel(null)}>Batal</button><button type="button" className="btn dan sp" onClick={remove}>Hapus</button></div></Modal>
+    <ConfirmDialog open={!!del} title="Hapus data?" confirmLabel="Hapus" onCancel={()=>setDel(null)} onConfirm={remove}
+      text={<><b style={{overflowWrap:'anywhere'}}>{(delRef.current?.[titleKey]||'Data ini').slice(0,120)}</b> akan dihapus permanen dan tidak bisa dikembalikan.{archivable&&!delRef.current?.archived&&' Jika hanya ingin menyembunyikan, gunakan Arsipkan.'}</>}/>
     <Preview row={prev} urlKey={urlKey} onClose={()=>setPrev(null)}/>
   </div>}
