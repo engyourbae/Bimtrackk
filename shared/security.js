@@ -36,13 +36,15 @@ export function useLoginGuard(id){
 export const SESSION_OPTS=[{value:'15',label:'15 menit'},{value:'60',label:'1 jam'},{value:'480',label:'8 jam'},{value:'10080',label:'7 hari'}];
 export const getSessionPolicy=app=>{const v=jget(app+':policy',null);return v&&typeof v.on==='boolean'&&SESSION_OPTS.some(o=>+o.value===v.m)?v:{on:false,m:60}};
 export const setSessionPolicy=(app,v)=>{jset(app+':policy',v);jset(app+':active',Date.now())};
+/** Mulai jam sesi dari sekarang. Dipanggil SEBELUM proses masuk/daftar, supaya waktu aktif dari sesi lama tidak membuat sesi baru langsung kedaluwarsa. */
+export const resetSessionClock=app=>jset(app+':active',Date.now());
 export const consumeExpiredNotice=app=>{const v=jget(app+':expired',null);if(v)jset(app+':expired',null);return!!v&&Date.now()-v<DAY};
 /** Pantau aktivitas; keluar otomatis bila tidak aktif melebihi batas. Mengembalikan fungsi berhenti. */
 export function startSessionGuard(app,{onExpire,onWarn}={}){
   let lastTouch=0,warned=false,dead=false;
   const touch=force=>{const t=Date.now();if(!force&&t-lastTouch<10000)return;lastTouch=t;warned=false;if(getSessionPolicy(app).on)jset(app+':active',t)};
   const check=()=>{if(dead)return;const p=getSessionPolicy(app);if(!p.on)return;const last=jget(app+':active',Date.now()),left=last+p.m*60000-Date.now();
-    if(left<=0){dead=true;jset(app+':expired',Date.now());onExpire&&onExpire();return}
+    if(left<=0){dead=true;jset(app+':expired',Date.now());jset(app+':active',null);onExpire&&onExpire();return}
     if(left<=60000&&!warned){warned=true;onWarn&&onWarn(Math.ceil(left/1000))}};
   check();if(!dead)touch(true);
   const ev=['pointerdown','keydown','touchstart','scroll'],h=()=>touch(false),vis=()=>{if(document.visibilityState==='visible'){check();if(!dead)touch(false)}};
