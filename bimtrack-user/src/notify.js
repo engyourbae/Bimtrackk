@@ -15,6 +15,8 @@ const remember=id=>{const s=[...seen(),id].slice(-60);ls(N,JSON.stringify(s))};
 async function show(title,body,tag){
   try{const reg=await navigator.serviceWorker?.getRegistration?.();if(reg?.showNotification){await reg.showNotification(title,{body,tag,icon:'./icon-192.png'});return true}
     if(notifSupported()){new Notification(title,{body,tag,icon:'./icon-192.png'});return true}}catch{}return false}
+/** Notifikasi uji langsung setelah izin diberikan, supaya terlihat/terdengar bahwa notifikasi benar-benar bekerja. */
+export const testNotif=()=>show('BIMTRACK','Notifikasi aktif. Pengingat muncul 30 menit sebelum jadwal selama BIMTRACK terbuka.','bimtrack-test');
 /** Jadwalkan notifikasi untuk baris jadwal. Mengembalikan fungsi pembatal. */
 export function scheduleNotifs(rows,now=Date.now()){
   if(!notifOn())return()=>{};
