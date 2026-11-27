@@ -59,6 +59,9 @@ jobs:
           cp "$F/plus-jakarta-sans/files/plus-jakarta-sans-latin-wght-normal.woff2" site/fonts/plus-jakarta-sans.woff2 || echo "::warning::font Plus Jakarta Sans tidak ditemukan, memakai font cadangan"
           cp "$F/manrope/files/manrope-latin-wght-normal.woff2" site/fonts/manrope.woff2 || echo "::warning::font Manrope tidak ditemukan, memakai font cadangan"
           touch site/.nojekyll
+          # Versi service worker landing = hash commit (supaya cache landing diperbarui tiap deploy)
+          sed -i "s/const VERSION='dev'/const VERSION='${GITHUB_SHA::10}'/" site/service-worker.js
+          grep -q "const VERSION='${GITHUB_SHA::10}'" site/service-worker.js
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
