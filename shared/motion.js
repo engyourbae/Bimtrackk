@@ -12,3 +12,9 @@ export function useReveal(rootSel,dep){
     const reg=n=>{if(n.nodeType!==1)return;if(n.matches(SEL))add(n);n.querySelectorAll(SEL).forEach(add)};
     reg(root);const mo=new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(reg)));mo.observe(root,{childList:true,subtree:true});
     return()=>{io.disconnect();mo.disconnect()}},[rootSel,dep])}
+
+/** Kunci cubit-zoom ala aplikasi. Chrome/Android: viewport + touch-action (base.css). iOS Safari mengabaikan user-scalable=no, jadi gesture* ditahan di sini. */
+export function lockGestures(){
+  if(typeof document==='undefined')return;
+  ['gesturestart','gesturechange','gestureend'].forEach(t=>document.addEventListener(t,e=>e.preventDefault()));
+  document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault()},{passive:false})}
