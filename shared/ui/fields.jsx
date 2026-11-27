@@ -1,5 +1,6 @@
 import {useState,useEffect,useRef,useId} from 'react';
 import {Icon} from '../icons';
+import {useSlider} from '../motion';
 import {Modal,Popover,useMobile} from './core';
 import {BULAN,BULAN_S,fmtDate,isTime,monthGrid,parseDate,todayStr} from '../date';
 
@@ -85,6 +86,7 @@ export const Checkbox=({checked,onChange,label,disabled})=><label className={'ch
 export function RadioGroup({value,onChange,options,label}){const name=useId();
   return <div role="radiogroup" aria-label={label}>{options.map(o=>{const x=norm(o);return <label className="rad" key={String(x.value)}><input type="radio" name={name} checked={x.value===value} onChange={()=>onChange(x.value)}/><span className="rad-dot"/><span>{x.label}</span></label>})}</div>}
 export const Switch=({checked,onChange,label,disabled})=><label className={'swt'+(disabled?' dis':'')}><input type="checkbox" role="switch" checked={!!checked} disabled={disabled} onChange={e=>onChange(e.target.checked)}/><span className="sw-track"/>{label&&<span>{label}</span>}</label>;
-export const Segmented=({value,onChange,options,label})=><div className="seg" role="radiogroup" aria-label={label}>{options.map(o=><button type="button" role="radio" aria-checked={o.value===value} key={o.value} onClick={()=>onChange(o.value)}>{o.icon&&<Icon name={o.icon} size={16}/>}{o.label}</button>)}</div>;
+export function Segmented({value,onChange,options,label}){const ref=useRef(null);useSlider(ref,'[aria-checked=true]',value+'|'+options.length);
+  return <div className="seg" ref={ref} role="radiogroup" aria-label={label}>{options.map(o=><button type="button" role="radio" aria-checked={o.value===value} key={o.value} onClick={()=>onChange(o.value)}>{o.icon&&<Icon name={o.icon} size={16}/>}{o.label}</button>)}</div>}
 export function ThemePick({get,set}){const[t,setT]=useState(get());
   return <Segmented label="Tema" value={t} onChange={v=>{set(v);setT(v)}} options={[{value:'light',label:'Terang',icon:'sun'},{value:'dark',label:'Gelap',icon:'moon'},{value:'system',label:'Sistem',icon:'monitor'}]}/>}

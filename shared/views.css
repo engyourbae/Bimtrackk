@@ -108,3 +108,22 @@
 .hlp-b p{margin:0}
 .hlp-b .btn{align-self:flex-start}
 @media(prefers-reduced-motion:reduce){.hlp>summary svg{transition:none}}
+
+/* ---------- Indikator geser: tab (Segmented), navigasi bawah, menu samping ----------
+   Dipasang oleh useSlider (shared/motion.js): kontainer diberi [data-sl] + --sl-x/y/w/h dari elemen aktif.
+   Latar aktif digambar sebagai ::before kontainer yang meluncur ke posisi baru; latar aktif bawaan dimatikan hanya selama [data-sl] ada. */
+[data-sl]{position:relative}
+[data-sl]::before,.sb-nav[data-sl]::after{content:'';position:absolute;left:0;top:0;width:var(--sl-w,0);height:var(--sl-h,0);transform:translate(var(--sl-x,0),var(--sl-y,0));pointer-events:none;
+  transition:transform 380ms cubic-bezier(.3,1.2,.4,1),width 380ms cubic-bezier(.3,1.2,.4,1),height 380ms cubic-bezier(.3,1.2,.4,1)}
+[data-sl-i]::before,.sb-nav[data-sl-i]::after{transition:none}
+.seg button,.nav-item,.bn-i{transition:color 260ms var(--ease)}
+.seg[data-sl]::before{border-radius:calc(var(--r-md) - 3px);background:var(--surface);box-shadow:var(--sh1),var(--hl)}
+.seg[data-sl] button[aria-checked=true]{background:none;box-shadow:none}
+.bottom-nav[data-sl]::before{border-radius:14px;background:var(--primary-soft);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--primary) 14%,transparent)}
+.bottom-nav[data-sl] .bn-i.on .bn-ico{background:none;box-shadow:none}
+.sb-nav[data-sl]::before{border-radius:var(--r-md);background:var(--primary-soft);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--primary) 14%,transparent)}
+.sb-nav[data-sl]::after{width:3px;height:calc(var(--sl-h,0px) - 20px);border-radius:0 3px 3px 0;background:var(--accent);transform:translate(-12px,calc(var(--sl-y,0px) + 10px))}
+.sb-nav[data-sl] .nav-item.on{background:none;box-shadow:none}
+.sb-nav[data-sl] .nav-item.on::before{content:none}
+.sw-track{transition:background-color 240ms var(--ease)}
+@media(prefers-reduced-motion:reduce){[data-sl]::before,.sb-nav[data-sl]::after{transition:none}.seg button,.nav-item,.bn-i,.sw-track{transition:none}}
