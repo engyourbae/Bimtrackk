@@ -14,7 +14,7 @@ const isAdmin=async u=>{const a=await getDoc(doc(db,'admins',u.uid));return a.ex
 function Login({err}){const[i,setI]=useState(''),[p,setP]=useState(''),[b,setB]=useState(false),[e,setE]=useState(''),[keep,setKeep]=useState(true),lim=useLoginGuard(i);
   useEffect(()=>{if(err?.k)lim.fail()},[err?.k]);
   const go=async ev=>{ev.preventDefault();if(lim.locked)return;if(!i.trim()||!p){setE('Isi email dan kata sandi.');return}setB(true);setE('');
-    try{const id=i.includes('@')?i.trim():nimEmail(i);await setPersistence(auth,keep?browserLocalPersistence:browserSessionPersistence).catch(()=>{});await signInWithEmailAndPassword(auth,id,p);lim.ok()}catch(x){lim.fail(x?.code==='auth/too-many-requests'?300:0);setE('Email atau kata sandi salah.')}setB(false)};
+    try{const id=i.includes('@')?i.trim():nimEmail(i);await setPersistence(auth,keep?browserLocalPersistence:browserSessionPersistence).catch(()=>{});resetSessionClock('admin');await signInWithEmailAndPassword(auth,id,p);lim.ok()}catch(x){lim.fail(x?.code==='auth/too-many-requests'?300:0);setE('Email atau kata sandi salah.')}setB(false)};
   const msg=e||err?.m;
   return <AuthLayout variant="admin" title="Masuk administrator" sub="Gunakan akun pengelola yang terdaftar.">
     <form onSubmit={go} noValidate>
