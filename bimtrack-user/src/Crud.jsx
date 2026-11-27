@@ -1,11 +1,12 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
 import {collection,doc,onSnapshot,query,where,setDoc,updateDoc,deleteDoc,serverTimestamp} from 'firebase/firestore';
 import {db} from './firebase';
-import {Modal,Select,StatusSelect,Segmented,DatePicker,TimePicker,Badge,Icon,PageHead,EmptyState,SkeletonList,Pagination,usePager,Menu,ContextMenu,Timeline,ConfirmDialog,toast} from './shared/ui';
+import {Modal,Select,StatusSelect,Segmented,DatePicker,TimePicker,Badge,Icon,PageHead,EmptyState,Pagination,usePager,Menu,ContextMenu,Timeline,ConfirmDialog,toast} from './shared/ui';
 import {fmtDate,todayStr,relDay,BULAN,BULAN_S} from '@shared/date';
 import {navigate} from '@shared/router';
 import {PAGE,REL_LABEL} from './config';
 import {parseDrive,isDriveUrl} from './drive';
+import {ListSkeleton} from './PageSkeleton';
 
 const show=(fields,k,v)=>fields.find(f=>f.k===k)?.type==='date'?fmtDate(v):v;
 const ls=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch{return null}};
@@ -85,13 +86,16 @@ export default function Crud({col,uid,title,heading,listTitle,embedded,fields,ti
   const pickView=v=>{setView(v);ls('bimtrack-view-'+col,v)};
   const VL={list:{value:'list',label:'Daftar',icon:'list'},gallery:{value:'gallery',label:'Galeri',icon:'image'},group:{value:'group',label:'Per kategori',icon:'grid'},board:{value:'board',label:'Papan',icon:'board'},timeline:{value:'timeline',label:'Linimasa',icon:'timeline'}};
   const badgeVal=x=>statusKey&&x[statusKey]?<Badge tone={tones[x[statusKey]]||'neutral'}>{x[statusKey]}</Badge>:(filters[0]&&x[filters[0].key]?<Badge>{x[filters[0].key]}</Badge>:null);
-  const Card=x=><ContextMenu key={x.id} items={acts(x)}><div className="card clk" onClick={()=>setDet(x)}><div className="row"><b className="sp">{x[titleKey]||'-'}</b>{badgeVal(x)}{badge&&badge(x)&&<Badge tone="danger">{badge(x)}</Badge>}<Menu items={acts(x)} label={'Tindakan untuk '+(x[titleKey]||'data')}/></div>
-    <div className="mut" style={{fontSize:'var(--fs-sm)'}}>{subKeys.map(k=>show(fields,k,x[k])).filter(Boolean).join(' · ')}</div></div></ContextMenu>;
-  const GCard=x=><ContextMenu key={x.id} items={acts(x)}><div className="gal-c" onClick={()=>setDet(x)} role="button" tabIndex={0} onKeyDown={e=>(e.key==='Enter'||e.key===' ')&&(e.preventDefault(),setDet(x))}><Thumb url={x[urlKey]}/><div className="gal-t"><b>{x[titleKey]||'-'}</b><span className="mut">{subKeys.map(k=>show(fields,k,x[k])).filter(Boolean).join(' · ')}</span></div></div></ContextMenu>;
+  const metaOf=x=>subKeys.map(k=>show(fields,k,x[k])).filter(Boolean).join(' · ');
+  // Kotak seragam: judul maks 2 baris (ellipsis), badge di baris sendiri, meta satu baris. Judul lengkap ada di Detail.
+  const CardBody=(x,items,cls,noBadge)=>{const bd=noBadge?null:badgeVal(x),lt=badge&&badge(x);
+    return <div className={'card clk cc'+(cls||'')} onClick={()=>setDet(x)}><div className="cc-h"><b className="cc-t" title={x[titleKey]||undefined}>{x[titleKey]||'-'}</b><Menu items={items} label={'Tindakan untuk '+(x[titleKey]||'data')}/></div>
+      <div className="cc-b">{bd}{lt&&<Badge tone="danger">{lt}</Badge>}</div><div className="mut cc-m" title={metaOf(x)||undefined}>{metaOf(x)}</div></div>};
+  const Card=x=><ContextMenu key={x.id} className="cc-w" items={acts(x)}>{CardBody(x,acts(x))}</ContextMenu>;
+  const GCard=x=><ContextMenu key={x.id} className="gal-w" items={acts(x)}><div className="gal-c" onClick={()=>setDet(x)} role="button" tabIndex={0} onKeyDown={e=>(e.key==='Enter'||e.key===' ')&&(e.preventDefault(),setDet(x))}><Thumb url={x[urlKey]}/><div className="gal-t"><b title={x[titleKey]||undefined}>{x[titleKey]||'-'}</b><span className="mut" title={metaOf(x)||undefined}>{metaOf(x)}</span></div></div></ContextMenu>;
   const boardOpts=statusKey?fields.find(f=>f.k===statusKey)?.options||[]:[],tone0=o=>tones[o]==='neutral'?'':tones[o]||'';
-  const BCard=x=>{const cur=x[statusKey]||boardOpts[0],mv=boardOpts.filter(o=>o!==cur).map(o=>({label:'Pindahkan ke “'+o+'”',icon:'chev-right',onClick:()=>setStatus(x,o)}));
-    return <ContextMenu key={x.id} items={[...mv,{sep:true},...acts(x)]}><div className="card clk bc" onClick={()=>setDet(x)}><div className="row"><b className="sp">{x[titleKey]||'-'}</b>{badge&&badge(x)&&<Badge tone="danger">{badge(x)}</Badge>}<Menu items={[...mv,{sep:true},...acts(x)]} label={'Tindakan untuk '+(x[titleKey]||'data')}/></div>
-      <div className="mut" style={{fontSize:'var(--fs-sm)'}}>{subKeys.map(k=>show(fields,k,x[k])).filter(Boolean).join(' · ')}</div></div></ContextMenu>};
+  const BCard=x=>{const cur=x[statusKey]||boardOpts[0],mv=boardOpts.filter(o=>o!==cur).map(o=>({label:'Pindahkan ke “'+o+'”',icon:'chev-right',onClick:()=>setStatus(x,o)})),items=[...mv,{sep:true},...acts(x)];
+    return <ContextMenu key={x.id} className="cc-w" items={items}>{CardBody(x,items,' bc',true)}</ContextMenu>};
   const body=()=>{
     if(view==='board')return <div className="board">{boardOpts.map(o=>{const items=list.filter(x=>(x[statusKey]||boardOpts[0])===o);
       return <section className="bcol" key={o} aria-label={o}><div className="bcol-h"><i className={'dot '+tone0(o)}/><h3>{o}</h3><Badge>{items.length}</Badge></div>{items.length?items.map(BCard):<p className="bcol-e">Tidak ada data di kolom ini.</p>}</section>})}</div>;
@@ -101,8 +105,8 @@ export default function Crud({col,uid,title,heading,listTitle,embedded,fields,ti
       return <>{g.map(z=><section key={z.m} className="grp"><div className="sec-h"><h2>{BULAN[+z.m.slice(5,7)-1]} {z.m.slice(0,4)}</h2><Badge>{z.items.length}</Badge></div>{z.items.map(Row)}</section>)}
         {undated.length>0&&<section className="grp"><div className="sec-h"><h2>Tanpa tanggal</h2><Badge>{undated.length}</Badge></div>{undated.map(Row)}</section>}</>}
     if(view==='gallery')return <div className="gal">{pg.slice.map(GCard)}</div>;
-    if(view==='group'){const g={};pg.slice.forEach(x=>{(g[x[groupKey]||'Tanpa kategori']=g[x[groupKey]||'Tanpa kategori']||[]).push(x)});return Object.keys(g).sort().map(k=><section key={k} className="grp"><div className="sec-h"><h2>{k}</h2><Badge>{g[k].length}</Badge></div>{g[k].map(Card)}</section>)}
-    return pg.slice.map(Card)};
+    if(view==='group'){const g={};pg.slice.forEach(x=>{(g[x[groupKey]||'Tanpa kategori']=g[x[groupKey]||'Tanpa kategori']||[]).push(x)});return Object.keys(g).sort().map(k=><section key={k} className="grp"><div className="sec-h"><h2>{k}</h2><Badge>{g[k].length}</Badge></div><div className="crud-g">{g[k].map(Card)}</div></section>)}
+    return <div className="crud-g">{pg.slice.map(Card)}</div>};
 
   return <div>
     {embedded?<div className="sec-h"><h2>{listTitle||title}</h2><button type="button" className="btn" onClick={()=>openForm()}><Icon name="plus" size={18}/> Tambah</button></div>
@@ -118,7 +122,7 @@ export default function Crud({col,uid,title,heading,listTitle,embedded,fields,ti
       {(rg.from||rg.to)&&<button type="button" className="fchip" onClick={()=>setRg({})}>{rg.from?fmtDate(rg.from,'sedang'):'…'} – {rg.to?fmtDate(rg.to,'sedang'):'…'} <Icon name="x" size={14}/><span className="sr">Hapus filter tanggal</span></button>}
       <button type="button" className="btn ghost sm" onClick={()=>{setFv({});setRg({})}}>Reset semua</button></div>}
     {rows!==null&&filtered&&<p className="mut cnt-l">{list.length} data ditemukan</p>}
-    {rows===null?<SkeletonList n={3}/>:!list.length?<EmptyState title={filtered?'Tidak ada hasil':tab==='arsip'?'Arsip kosong':'Belum ada '+title.toLowerCase()} text={filtered?'Coba ubah kata kunci atau filter.':tab==='arsip'?'Data yang diarsipkan akan muncul di sini.':'Data yang kamu tambahkan akan muncul di sini.'} action={filtered?<button type="button" className="btn sec" onClick={()=>{setQ('');setFv({});setRg({})}}>Hapus pencarian dan filter</button>:tab==='aktif'&&<button type="button" className="btn" onClick={()=>openForm()}><Icon name="plus" size={18}/> Tambah {title.toLowerCase()}</button>}/>:<>
+    {rows===null?<ListSkeleton view={view}/>:!list.length?<EmptyState title={filtered?'Tidak ada hasil':tab==='arsip'?'Arsip kosong':'Belum ada '+title.toLowerCase()} text={filtered?'Coba ubah kata kunci atau filter.':tab==='arsip'?'Data yang diarsipkan akan muncul di sini.':'Data yang kamu tambahkan akan muncul di sini.'} action={filtered?<button type="button" className="btn sec" onClick={()=>{setQ('');setFv({});setRg({})}}>Hapus pencarian dan filter</button>:tab==='aktif'&&<button type="button" className="btn" onClick={()=>openForm()}><Icon name="plus" size={18}/> Tambah {title.toLowerCase()}</button>}/>:<>
       {body()}{view!=='board'&&view!=='timeline'&&<Pagination page={pg.page} pages={pg.pages} onPage={pg.setPage} total={pg.total}/>}</>}
 
     <Modal open={showF} title="Filter" onClose={()=>setShowF(false)} footer={<div className="row"><button type="button" className="btn sec sp" onClick={()=>{setFv({});setRg({})}}>Reset</button><button type="button" className="btn sp" onClick={()=>setShowF(false)}>Tampilkan {list.length} data</button></div>}>

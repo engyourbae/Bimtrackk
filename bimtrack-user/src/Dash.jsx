@@ -5,6 +5,7 @@ import {Icon,Badge,Progress,EmptyState,Skeleton,Timeline} from './shared/ui';
 import {todayStr,fmtDate,relDay,relTime,sapaan,hariPanjang} from '@shared/date';
 import {calcProgress,nextStep,urgentRevisi,STATUS_TONE} from './progress';
 import Formula from './Formula';
+import {DashSkeleton} from './PageSkeleton';
 const COLS=['bimbingan','revisi','jadwal','rundown','dokumen','ringkasan'];
 const QA=[['Catatan','bimbingan','bim/baru'],['Revisi','revisi','rev/baru'],['Jadwal','jadwal','jdw/baru'],['Rundown','rundown','run/baru'],['Dokumen','dokumen','dok/baru'],['Bukti','image','bkt/baru'],['Laporan','laporan','rin'],['Perjalanan','route','prog']];
 const ACT={bimbingan:['bimbingan','Bimbingan',x=>x.topik],revisi:['revisi','Revisi',x=>x.catatan],dokumen:['dokumen','Dokumen',x=>x.nama],ringkasan:['ringkasan','Catatan ringkasan',x=>x.scope]};
@@ -13,7 +14,7 @@ export default function Dash({uid,prof,go}){
   const[d,setD]=useState({});
   useEffect(()=>{setD({});const un=COLS.map(c=>onSnapshot(query(collection(db,c),where('ownerUid','==',uid)),s=>setD(x=>({...x,[c]:s.docs.map(z=>z.data())})),()=>setD(x=>({...x,[c]:[]}))));return()=>un.forEach(f=>f())},[uid]);
   const[how,setHow]=useState(false),ready=COLS.every(c=>d[c]);
-  if(!ready)return <div><div className="greet"><Skeleton w="55%" h={32}/></div><div className="dash"><div className="dash-col"><Skeleton h={130} r={16}/><Skeleton h={84} r={16}/><Skeleton h={260} r={16}/></div><div className="dash-col"><Skeleton h={160} r={16}/><Skeleton h={160} r={16}/></div></div></div>;
+  if(!ready)return <DashSkeleton/>;
   const t=todayStr(),P=calcProgress({...d,today:t}),nx=nextStep({...d,today:t}),urg=urgentRevisi(d.revisi,t),
     jd=d.jadwal.filter(x=>x.tanggal>=t&&!['Dibatalkan','Selesai'].includes(x.status)).sort((a,b)=>(a.tanggal+(a.jam||''))<(b.tanggal+(b.jam||''))?-1:1).slice(0,3),
     act=Object.entries(ACT).flatMap(([c,[ic,lbl,tt]])=>d[c].map(x=>({key:c+x.id,icon:ic,t:ts(x),title:tt(x)||'-',lbl}))).sort((a,b)=>b.t-a.t).slice(0,6);
