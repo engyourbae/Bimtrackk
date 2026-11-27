@@ -49,3 +49,29 @@
 .jr-l{list-style:none;margin:var(--s3) 0;padding:0;display:flex;flex-direction:column;gap:var(--s1);font-size:var(--fs-sm)}
 .jr-late{color:var(--danger);font-weight:600}.jr-a .btn{flex:1 1 auto}
 .jr-b .bar{margin-top:var(--s3)}
+
+/* ---------- daftar Crud: kotak seragam (lebar dan tinggi sama di grid yang sama) ---------- */
+.crud-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:var(--s3);margin-bottom:var(--s4);align-items:stretch}
+.cc-w,.gal-w{display:flex;min-width:0}
+.cc{flex:1;min-width:0;margin:0;display:flex;flex-direction:column;gap:var(--s2)}
+.cc-h{display:flex;align-items:flex-start;gap:var(--s2);min-height:var(--tap)}
+.cc-t{flex:1;min-width:0;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;overflow-wrap:anywhere;
+  line-height:1.35;min-height:calc(2 * 1.35em);padding-top:2px;font-size:var(--fs-md)}
+.cc-t.sk-t{display:flex;flex-direction:column;gap:6px}
+.cc-b{display:flex;flex-wrap:nowrap;gap:var(--s2);align-items:center;min-height:24px;min-width:0;overflow:hidden}
+.cc-b .badge{flex:0 1 auto;min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cc-m{min-width:0;font-size:var(--fs-sm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.board .cc,.bcol .cc{margin:0}
+.tlv .cc-w{min-width:0}
+
+/* ---------- galeri: tinggi kotak sama, rasio thumbnail tetap ---------- */
+.gal{align-items:stretch}
+.gal-c{flex:1;min-width:0;height:100%}
+.gal-i{aspect-ratio:4/3;flex:none}
+.gal-t{flex:1;min-width:0}
+.gal-t b{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;overflow-wrap:anywhere;line-height:1.3;min-height:calc(2 * 1.3em)}
+.gal-t span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ---------- logo: jarak ikut berskala (fontSize = size) agar splash dan logo tujuan identik ---------- */
+.logo-lockup:not(.stacked){gap:.24em}
+.splash-logo .logo-lockup{gap:.24em}

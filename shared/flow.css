@@ -8,6 +8,8 @@
 .splash-logo{position:fixed;left:0;top:0;display:inline-flex;transform-origin:0 0;will-change:transform}
 .splash-logo.go{transition:transform 560ms var(--ease-out)}
 .splash-logo.fade{transition:opacity 320ms var(--ease)}.splash-logo.go.fade{opacity:0}
+/* tujuan hanya berupa tanda gambar (sidebar ciut): teks logo memudar selama meluncur */
+.splash-logo .wordmark{transition:opacity 260ms var(--ease)}.splash-logo.no-word .wordmark{opacity:0}
 .splash .lg-ink{transform-box:fill-box;transform-origin:50% 60%;animation:sp-ink 520ms var(--ease-out) both}
 .splash .lg-g{transform-box:fill-box;animation:sp-g 560ms var(--ease-out) 240ms both}
 .splash .wordmark{animation:sp-w 480ms var(--ease-out) 360ms both}
@@ -17,9 +19,11 @@
 @keyframes sp-w{from{opacity:0;transform:translateY(10px)}}
 
 /* ---------- Layar di bawah splash: tersembunyi lalu masuk berurutan saat logo meluncur ---------- */
-html.splashing :is(.auth-main>:not(.auth-m-brand),.auth-panel>:not(:first-child),.onb-body,.onb-act,.content-in,.bottom-nav,.sb-nav,.sb-foot){opacity:0}
-html.flow-go :is(.auth-main>:not(.auth-m-brand),.auth-panel>:not(:first-child),.onb-body,.onb-act,.content-in,.bottom-nav,.sb-nav,.sb-foot){animation:flow-in 460ms var(--ease-out) both;animation-delay:calc(120ms + var(--i,0)*55ms)}
-.auth-main>:nth-child(3),.auth-panel>:nth-child(3),.onb-act{--i:1}.auth-main>:nth-child(4),.sb-foot{--i:2}.auth-main>:nth-child(5){--i:3}.auth-main>:nth-child(6){--i:4}
+/* Daftar elemen yang masuk bertahap. Logo tujuan (data-brand-target) disembunyikan selama splash masih ada: hanya ada SATU logo yang terlihat. */
+html.splashing :is(.auth-main>:not(.auth-m-brand),.auth-m-brand .tag,.auth-panel>:not(:first-child),.onb-body,.onb-act,.content-in,.bottom-nav,.sb-nav,.sb-foot,.topbar .row){opacity:0}
+html.splashing [data-brand-target],html.brand-hold [data-brand-target]{visibility:hidden}
+html.flow-go :is(.auth-main>:not(.auth-m-brand),.auth-m-brand .tag,.auth-panel>:not(:first-child),.onb-body,.onb-act,.content-in,.bottom-nav,.sb-nav,.sb-foot,.topbar .row){animation:flow-in 460ms var(--ease-out) both;animation-delay:calc(120ms + var(--i,0)*55ms)}
+.auth-main>:nth-child(3),.auth-m-brand .tag,.auth-panel>:nth-child(3),.onb-act,.topbar .row{--i:1}.auth-main>:nth-child(4),.sb-foot{--i:2}.auth-main>:nth-child(5){--i:3}.auth-main>:nth-child(6){--i:4}
 @keyframes flow-in{from{opacity:0;transform:translateY(14px)}}
 
 /* ---------- Orientasi pertama kali ---------- */

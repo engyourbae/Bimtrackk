@@ -1,7 +1,7 @@
 import {useEffect,useState} from 'react';
 import {Icon} from './icons';
 import {Logo} from './logo';
-import {Modal} from './ui/core';
+import {Modal,Skeleton} from './ui/core';
 import {ThemePick} from './ui/fields';
 import {getTheme,setTheme} from './theme';
 import {useReveal} from './motion';
@@ -13,7 +13,7 @@ import {useReveal} from './motion';
  *  short: label pendek untuk navigasi bawah HP. topSlot: tampil di bilah atas (HP) dan di pojok kanan atas konten (tablet/laptop).
  *  admin: menampilkan pita "ADMIN" yang selalu terlihat.
  */
-export default function AppShell({nav,page,onNavigate,children,admin,identity,sub,onLogout,topSlot}){
+export default function AppShell({nav,page,onNavigate,children,admin,identity,sub,onLogout,topSlot,loading}){
   const[more,setMore]=useState(false),[open,setOpen]=useState(false),mains=nav.filter(n=>n.main).slice(0,4),inMain=mains.some(n=>n.k===page);
   useEffect(()=>{window.scrollTo(0,0)},[page]);
   useReveal('#main',page);
@@ -30,10 +30,10 @@ export default function AppShell({nav,page,onNavigate,children,admin,identity,su
         <nav className="sb-nav">{nav.map(n=>{const g=n.group&&n.group!==lastGroup?n.group:null;if(n.group)lastGroup=n.group;
           return <div key={n.k} style={{display:'contents'}}>{g&&<div className="sb-group">{g}</div>}
             <button type="button" className={'nav-item'+(page===n.k?' on':'')} title={n.label} aria-current={page===n.k?'page':undefined} onClick={()=>go(n.k)}><Icon name={n.icon}/><span className="nl-t">{n.label}</span>{!!n.badge&&<span className="nl-b">{n.badge}</span>}</button></div>})}</nav>
-        <div className="sb-foot">{identity&&<div className="idc"><span className="avatar" aria-hidden="true">{initial}</span><div className="idc-t"><b>{identity}</b>{sub&&<span>{sub}</span>}</div></div>}
+        <div className="sb-foot">{loading?<div className="idc" aria-hidden="true"><Skeleton w={36} h={36} r={18}/><div className="idc-t" style={{flex:1}}><Skeleton w="70%" h={12}/><Skeleton w="50%" h={10}/></div></div>:identity&&<div className="idc"><span className="avatar" aria-hidden="true">{initial}</span><div className="idc-t"><b>{identity}</b>{sub&&<span>{sub}</span>}</div></div>}
           {onLogout&&<button type="button" className="nav-item" title="Keluar" onClick={onLogout}><Icon name="logout"/><span className="nl-t">Keluar</span></button>}</div></aside>
         <div className={'sb-scrim'+(open?' on':'')} onClick={()=>setOpen(false)} aria-hidden="true"/></div>
-      <div className="content"><main id="main" tabIndex={-1} className="content-in">{topSlot&&<div className="deskbar">{topSlot}</div>}<div className="page" key={page} aria-label={cur?.label}>{children}</div></main></div></div>
+      <div className="content"><main id="main" tabIndex={-1} className="content-in" aria-busy={loading||undefined}>{topSlot&&<div className="deskbar">{topSlot}</div>}<div className="page" key={page} aria-label={cur?.label}>{children}</div></main></div></div>
     <nav className="bottom-nav" aria-label="Navigasi bawah">{mains.map(n=><button type="button" key={n.k} className={'bn-i'+(page===n.k?' on':'')} aria-current={page===n.k?'page':undefined} onClick={()=>go(n.k)}>
       <span className="bn-ico"><Icon name={n.icon} size={22}/></span><span className="bn-l">{n.short||n.label}</span>{!!n.badge&&<span className="nl-b">{n.badge}</span>}</button>)}
       <button type="button" className={'bn-i'+(!inMain?' on':'')} aria-haspopup="dialog" onClick={()=>setMore(true)}><span className="bn-ico"><Icon name="grid" size={22}/></span><span className="bn-l">Lainnya</span></button></nav>

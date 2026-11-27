@@ -9,18 +9,27 @@ const SEEN='bimtrack-seen';
 export const hasSeen=()=>{try{return localStorage.getItem(SEEN)==='1'}catch{return true}};
 export const markSeen=()=>{try{localStorage.setItem(SEEN,'1')}catch{}};
 
-/** Splash: logo tampil, lalu meluncur ke posisi logo di layar berikutnya sementara latar memudar dan konten masuk berurutan (tanpa jeda). */
+/** Splash: SATU elemen logo bersama. Logo tampil bertahap di tengah, lalu meluncur tepat ke posisi logo di layar berikutnya.
+ *  Logo asli di layar tujuan disembunyikan (html.brand-hold) selama peluncuran, dan baru muncul pada bingkai yang sama saat splash dilepas,
+ *  jadi tidak pernah ada dua logo yang bertimpa. Konten layar naik bertahap di bawahnya; tanpa jeda kosong. */
 export function Splash({ready}){
   const[done,setDone]=useState(prefersReduced),[minOk,setMinOk]=useState(prefersReduced),[late,setLate]=useState(false),[out,setOut]=useState(false),ref=useRef(null);
-  useLayoutEffect(()=>{const h=document.documentElement;if(done){h.classList.remove('splashing');return}h.classList.add('splashing');
+  useLayoutEffect(()=>{const h=document.documentElement;if(done)return;h.classList.add('splashing');
     const el=ref.current,w=el.offsetWidth,hh=el.offsetHeight,s=Math.min(1.35,(innerWidth-40)/w);el.style.transform=`translate(${(innerWidth-w*s)/2}px,${(innerHeight-hh*s)/2}px) scale(${s})`},[done]);
   useEffect(()=>{if(done)return;const a=setTimeout(()=>setMinOk(true),1250),b=setTimeout(()=>setLate(true),4000);return()=>{clearTimeout(a);clearTimeout(b)}},[done]);
   useEffect(()=>{if(done||!minOk||!ready)return;const el=ref.current,h=document.documentElement,hh=el.offsetHeight;
-    const tg=[...document.querySelectorAll('[data-brand-target]')].map(n=>n.getBoundingClientRect()).find(r=>r.width>0&&r.height>0);
-    el.classList.add('go');if(tg)el.style.transform=`translate(${tg.left}px,${tg.top}px) scale(${tg.height/hh})`;else el.classList.add('fade');
-    h.classList.add('flow-go');setOut(true);
-    const t=setTimeout(()=>setDone(true),600);return()=>clearTimeout(t)},[minOk,ready,done]);
-  useEffect(()=>{if(!done)return;const h=document.documentElement;h.classList.remove('splashing');const t=setTimeout(()=>h.classList.remove('flow-go'),1100);return()=>clearTimeout(t)},[done]);
+    const tgEl=[...document.querySelectorAll('[data-brand-target]')].find(n=>{const r=n.getBoundingClientRect();return r.width>0&&r.height>0}),tg=tgEl&&tgEl.getBoundingClientRect();
+    const wm=tgEl&&tgEl.querySelector('.wordmark'),hasWord=!!wm&&getComputedStyle(wm).display!=='none';
+    // konten naik: lepas 'splashing' bersamaan dengan 'flow-go' agar animasi masuk berakhir di opacity 1 (bukan 0)
+    h.classList.add('brand-hold','flow-go');h.classList.remove('splashing');
+    el.classList.add('go');if(!hasWord&&tg)el.classList.add('no-word');
+    if(tg)el.style.transform=`translate(${tg.left}px,${tg.top}px) scale(${tg.height/hh})`;else el.classList.add('fade');
+    setOut(true);
+    const fin=()=>setDone(true),t=setTimeout(fin,tg?640:380),te=e=>{if(e.target===el&&e.propertyName==='transform')fin()};
+    el.addEventListener('transitionend',te);return()=>{clearTimeout(t);el.removeEventListener('transitionend',te)}},[minOk,ready,done]);
+  // pelepasan splash dan penampakan logo asli terjadi pada commit yang sama (sebelum cat), tanpa bingkai ganda/kosong
+  useLayoutEffect(()=>{if(!done)return;document.documentElement.classList.remove('splashing','brand-hold')},[done]);
+  useEffect(()=>{if(!done)return;const h=document.documentElement,t=setTimeout(()=>h.classList.remove('flow-go'),1100);return()=>clearTimeout(t)},[done]);
   if(done)return null;
   return <div className={'splash'+(out?' out':'')} aria-hidden="true"><div className="splash-bg"/><div className="splash-logo" ref={ref}><Logo size={60}/></div>
     {late&&!ready&&<p className="splash-late">Menyambungkan…</p>}</div>}
