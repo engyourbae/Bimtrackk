@@ -84,3 +84,10 @@
 .how{margin:var(--s2) 0 var(--s3);padding-left:1.3em;display:grid;gap:6px;font-size:var(--fs-sm)}
 .notif{display:grid;gap:var(--s3)}
 .notif .row{justify-content:space-between}
+
+/* ---------- Judul skripsi dan tahapan pra-skripsi (Perjalanan Skripsi) ---------- */
+.jdl{font-size:var(--fs-lg);font-weight:600;line-height:1.35;margin:0 0 var(--s3);overflow-wrap:anywhere}
+.pra{list-style:none;margin:var(--s3) 0 0;padding:0;display:flex;flex-direction:column;gap:var(--s2)}
+.pra li{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--s3);padding:var(--s3);border:1px solid var(--bd);border-radius:var(--r-md)}
+.pra-t{flex:1 1 200px;min-width:0;display:flex;flex-direction:column;gap:4px;font-size:var(--fs-sm)}
+.pra-s{flex:0 0 168px;max-width:100%}

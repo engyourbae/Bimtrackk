@@ -39,3 +39,8 @@
 .toast .sp{min-width:0;overflow-wrap:anywhere}
 .toast-act{flex:none;min-height:36px;padding:0 var(--s3);border:1px solid currentColor;border-radius:var(--r-sm);background:transparent;color:inherit;font-weight:700;font-size:var(--fs-sm)}
 .toast-act:active{transform:scale(.96)}
+
+/* ---------- keadaan galat (ErrorState) dan pembungkus skeleton (DataState) ---------- */
+.err-s .err-ic{display:inline-grid;place-items:center;width:56px;height:56px;border-radius:50%;margin-bottom:var(--s3);color:var(--danger);background:color-mix(in srgb,var(--danger) 14%,var(--surface))}
+.err-s h3{margin-bottom:var(--s2)}.err-s .btn{margin-top:var(--s4)}
+.ds-sk{min-width:0}

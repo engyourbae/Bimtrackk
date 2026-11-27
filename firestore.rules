@@ -121,6 +121,37 @@ service cloud.firestore {
       allow delete: if studentCol(col) && isApproved() && resource.data.ownerUid == dataUid();
     }
 
+    // ───────────────────────── Judul skripsi + tahapan pra-skripsi ─────────────────────────
+    // Satu dokumen per mahasiswa: ID dokumen = UID pemilik data (dataUid), jadi tetap terbaca setelah reset sandi.
+    // Tidak ikut rumus progres. Field dibatasi ketat (daftar kunci tahap sama dengan PRA di config.js); admin hanya membaca; tidak bisa dihapus.
+    match /skripsi/{docId} {
+      function praOk(d, k) {
+        return d.get('st_' + k, 'belum') in ['belum', 'berjalan', 'selesai']
+          && d.get('tg_' + k, '') is string && d.get('tg_' + k, '').size() <= 10;
+      }
+      function skripsiOk(d) {
+        return d.keys().hasOnly(['id', 'ownerUid', 'judul', 'judulStatus', 'createdAt', 'updatedAt',
+            'st_topik', 'tg_topik', 'st_judul', 'tg_judul', 'st_acc', 'tg_acc', 'st_pemb', 'tg_pemb', 'st_prop', 'tg_prop', 'st_sem', 'tg_sem'])
+          && d.get('judul', '') is string && d.get('judul', '').size() <= 300
+          && d.get('judulStatus', 'Draf') in ['Draf', 'Diajukan', 'Disetujui', 'Perlu diganti']
+          && d.get('createdAt', request.time) is timestamp && d.get('updatedAt', request.time) is timestamp
+          && praOk(d, 'topik') && praOk(d, 'judul') && praOk(d, 'acc') && praOk(d, 'pemb') && praOk(d, 'prop') && praOk(d, 'sem');
+      }
+      allow read: if (isApproved() && resource.data.ownerUid == dataUid()) || isAdmin();
+      allow create: if canWriteOwn()
+        && docId == dataUid()
+        && request.resource.data.ownerUid == dataUid()
+        && request.resource.data.id == docId
+        && skripsiOk(request.resource.data);
+      allow update: if canWriteOwn()
+        && resource.data.ownerUid == dataUid()
+        && request.resource.data.ownerUid == dataUid()
+        && request.resource.data.id == docId
+        && request.resource.data.get('createdAt', null) == resource.data.get('createdAt', null)
+        && skripsiOk(request.resource.data);
+      allow delete: if false;
+    }
+
     // Subkoleksi dan koleksi lain: ditolak
     match /{document=**} {
       allow read, write: if false;

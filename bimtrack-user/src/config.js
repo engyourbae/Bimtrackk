@@ -20,3 +20,11 @@ export const RUN_TONE={'Belum mulai':'neutral',Berjalan:'info',Selesai:'ok'};
 export const DOK_TONE={Draft:'neutral',Dikirim:'info',Revisi:'warn',Final:'ok'};
 /** Teks pilihan untuk kolom relasi (type:'rel'). */
 export const REL_LABEL={bimbingan:x=>[fmtDate(x.tanggal),x.topik].filter(Boolean).join(' · '),revisi:x=>[x.bab||'Umum',(x.catatan||'').slice(0,60)].filter(Boolean).join(' · ')};
+
+/** Tahapan pra-skripsi: checklist pribadi sebelum Bab I. TIDAK ikut rumus progres (progress.js tidak berubah).
+ *  Kunci (k) dipakai sebagai nama field st_<k>/tg_<k> di koleksi `skripsi`; daftar kunci yang sama ada di firestore.rules. */
+export const PRA=[{k:'topik',t:'Menentukan topik dan membaca referensi awal'},{k:'judul',t:'Mengajukan judul ke prodi'},{k:'acc',t:'Judul disetujui'},{k:'pemb',t:'Dosen pembimbing ditetapkan'},{k:'prop',t:'Menyusun proposal'},{k:'sem',t:'Seminar proposal'}];
+export const PRA_ST=[{value:'belum',label:'Belum'},{value:'berjalan',label:'Berjalan'},{value:'selesai',label:'Selesai'}];
+export const PRA_TONE={belum:'neutral',berjalan:'info',selesai:'ok'};
+export const JUDUL_ST=['Draf','Diajukan','Disetujui','Perlu diganti'];
+export const JUDUL_TONE={Draf:'neutral',Diajukan:'info',Disetujui:'ok','Perlu diganti':'warn'};

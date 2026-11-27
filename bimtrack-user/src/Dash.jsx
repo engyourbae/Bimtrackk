@@ -1,7 +1,6 @@
-import {useEffect,useState} from 'react';
-import {collection,onSnapshot,query,where} from 'firebase/firestore';
-import {db} from './firebase';
-import {Icon,Badge,Progress,EmptyState,Skeleton,Timeline} from './shared/ui';
+import {useState} from 'react';
+import {useCols} from './useData';
+import {Icon,Badge,Progress,EmptyState,DataState,Timeline} from './shared/ui';
 import {todayStr,fmtDate,relDay,relTime,sapaan,hariPanjang} from '@shared/date';
 import {calcProgress,nextStep,urgentRevisi,STATUS_TONE} from './progress';
 import Formula from './Formula';
@@ -11,10 +10,9 @@ const QA=[['Catatan','bimbingan','bim/baru'],['Revisi','revisi','rev/baru'],['Ja
 const ACT={bimbingan:['bimbingan','Bimbingan',x=>x.topik],revisi:['revisi','Revisi',x=>x.catatan],dokumen:['dokumen','Dokumen',x=>x.nama],ringkasan:['ringkasan','Catatan ringkasan',x=>x.scope]};
 const ts=x=>(x.updatedAt||x.createdAt)?.seconds??Date.now()/1000;
 export default function Dash({uid,prof,go}){
-  const[d,setD]=useState({});
-  useEffect(()=>{setD({});const un=COLS.map(c=>onSnapshot(query(collection(db,c),where('ownerUid','==',uid)),s=>setD(x=>({...x,[c]:s.docs.map(z=>z.data())})),()=>setD(x=>({...x,[c]:[]}))));return()=>un.forEach(f=>f())},[uid]);
-  const[how,setHow]=useState(false),ready=COLS.every(c=>d[c]);
-  if(!ready)return <DashSkeleton/>;
+  const live=useCols(COLS,uid),d=live.d,[how,setHow]=useState(false);
+  // memuat → skeleton; galat/offline/timeout → pesan + "Coba lagi" (tidak lagi tampil seolah data kosong)
+  if(live.status!=='ready')return <DataState status={live.status} error={live.error} onRetry={live.retry} skeleton={<DashSkeleton/>} label="Memuat dasbor"/>;
   const t=todayStr(),P=calcProgress({...d,today:t}),nx=nextStep({...d,today:t}),urg=urgentRevisi(d.revisi,t),
     jd=d.jadwal.filter(x=>x.tanggal>=t&&!['Dibatalkan','Selesai'].includes(x.status)).sort((a,b)=>(a.tanggal+(a.jam||''))<(b.tanggal+(b.jam||''))?-1:1).slice(0,3),
     act=Object.entries(ACT).flatMap(([c,[ic,lbl,tt]])=>d[c].map(x=>({key:c+x.id,icon:ic,t:ts(x),title:tt(x)||'-',lbl}))).sort((a,b)=>b.t-a.t).slice(0,6);

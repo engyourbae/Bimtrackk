@@ -1,7 +1,8 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
-import {collection,doc,onSnapshot,query,where,setDoc,updateDoc,deleteDoc,serverTimestamp} from 'firebase/firestore';
+import {collection,doc,setDoc,updateDoc,deleteDoc,serverTimestamp} from 'firebase/firestore';
+import {useCols} from './useData';
 import {db} from './firebase';
-import {Modal,Select,StatusSelect,Segmented,DatePicker,TimePicker,Badge,Icon,PageHead,EmptyState,Pagination,usePager,Menu,ContextMenu,Timeline,ConfirmDialog,toast} from './shared/ui';
+import {Modal,Select,StatusSelect,Segmented,DatePicker,TimePicker,Badge,Icon,PageHead,EmptyState,Pagination,usePager,Menu,ContextMenu,Timeline,ConfirmDialog,DataState,toast} from './shared/ui';
 import {fmtDate,todayStr,relDay,BULAN,BULAN_S} from '@shared/date';
 import {navigate} from '@shared/router';
 import {PAGE,REL_LABEL} from './config';
@@ -20,11 +21,6 @@ const takeFilter=col=>{try{const k='bimtrack-filter:'+col,v=sessionStorage.getIt
 /** Umpan balik simpan yang jujur: Firestore menyimpan di perangkat dulu, lalu sinkron saat online. */
 const savedMsg=()=>typeof navigator!=='undefined'&&navigator.onLine===false?'Tersimpan di perangkat. Akan disinkronkan saat online.':'Tersimpan';
 
-function useCols(cols,uid){
-  const[m,setM]=useState({}),key=cols.join();
-  useEffect(()=>{const offs=cols.map(c=>onSnapshot(query(collection(db,c),where('ownerUid','==',uid)),s=>setM(p=>({...p,[c]:s.docs.map(d=>d.data())})),()=>{}));return()=>offs.forEach(f=>f())},[key,uid]);// eslint-disable-line
-  return m}
-
 function Preview({row,urlKey,onClose}){
   const info=row&&parseDrive(row[urlKey]);
   return <Modal open={!!row} title={row?'Pratinjau: '+(row.nama||row.catatan||'berkas'):''} onClose={onClose} size="lg"
@@ -39,13 +35,13 @@ function Thumb({url}){
 
 export default function Crud({col,uid,title,heading,listTitle,embedded,fields,titleKey,subKeys,filters=[],sortKey='tanggal',urlKey,badge,header,autoNew,onAutoNew,openId,onOpenId,
   statusKey,tones={},history,doneStatus,doneKey,defaults,relations=[],actions=[],archivable,views=['list'],groupKey,range,scope,scopeKey='',descDefault=true,timeKey,sortLabels=['Terbaru','Terlama']}){
-  const[rows,setRows]=useState(null),[q,setQ]=useState(''),[fv,setFv]=useState(()=>takeFilter(col)),[rg,setRg]=useState({}),[desc,setDesc]=useState(descDefault),[showF,setShowF]=useState(false),
+  const[q,setQ]=useState(''),[fv,setFv]=useState(()=>takeFilter(col)),[rg,setRg]=useState({}),[desc,setDesc]=useState(descDefault),[showF,setShowF]=useState(false),
     [tab,setTab]=useState('aktif'),[view,setView]=useState(()=>{const v=ls('bimtrack-view-'+col);return views.includes(v)?v:views[0]}),
     [form,setForm]=useState(null),[errs,setErrs]=useState({}),[askClose,setAskClose]=useState(false),[del,setDel]=useState(null),[det,setDet]=useState(null),[prev,setPrev]=useState(null);
   const init=useRef(''),delRef=useRef(null);
   const relCols=useMemo(()=>[...new Set([...fields.filter(f=>f.type==='rel').map(f=>f.col),...relations.map(r=>r.col)])],[fields,relations]);
-  const rel=useCols(relCols,uid);
-  useEffect(()=>onSnapshot(query(collection(db,col),where('ownerUid','==',uid)),s=>setRows(s.docs.map(d=>d.data())),e=>toast(e.message,'err')),[col,uid]);
+  // satu langganan untuk daftar utama + data relasi; status memuat/galat/offline ditangani DataState (tidak ada lagi skeleton tanpa ujung)
+  const live=useCols([col,...relCols.filter(c=>c!==col)],uid),rel=live.d,rows=live.status==='ready'?(live.d[col]??null):null;
   const empty=()=>{const base={...(defaults?.()||{})};filters.forEach(f=>{if(fv[f.key]&&(f.options||f.from)&&fields.some(x=>x.k===f.key))base[f.key]=fv[f.key]});return{...base,...takePrefill(col)}};
   const openForm=v=>{const d=v||empty();init.current=JSON.stringify(d);setErrs({});setForm(d)};
   useEffect(()=>{if(autoNew){openForm();onAutoNew?.()}},[autoNew]);// eslint-disable-line
@@ -121,9 +117,9 @@ export default function Crud({col,uid,title,heading,listTitle,embedded,fields,ti
     {nf>0&&<div className="fchips">{filters.filter(f=>fv[f.key]).map(f=><button type="button" className="fchip" key={f.key} onClick={()=>setFv(s=>({...s,[f.key]:''}))}>{f.label}: {fv[f.key]} <Icon name="x" size={14}/><span className="sr">Hapus filter</span></button>)}
       {(rg.from||rg.to)&&<button type="button" className="fchip" onClick={()=>setRg({})}>{rg.from?fmtDate(rg.from,'sedang'):'…'} – {rg.to?fmtDate(rg.to,'sedang'):'…'} <Icon name="x" size={14}/><span className="sr">Hapus filter tanggal</span></button>}
       <button type="button" className="btn ghost sm" onClick={()=>{setFv({});setRg({})}}>Reset semua</button></div>}
-    {rows!==null&&filtered&&<p className="mut cnt-l">{list.length} data ditemukan</p>}
-    {rows===null?<ListSkeleton view={view}/>:!list.length?<EmptyState title={filtered?'Tidak ada hasil':tab==='arsip'?'Arsip kosong':'Belum ada '+title.toLowerCase()} text={filtered?'Coba ubah kata kunci atau filter.':tab==='arsip'?'Data yang diarsipkan akan muncul di sini.':'Data yang kamu tambahkan akan muncul di sini.'} action={filtered?<button type="button" className="btn sec" onClick={()=>{setQ('');setFv({});setRg({})}}>Hapus pencarian dan filter</button>:tab==='aktif'&&<button type="button" className="btn" onClick={()=>openForm()}><Icon name="plus" size={18}/> Tambah {title.toLowerCase()}</button>}/>:<>
-      {body()}{view!=='board'&&view!=='timeline'&&<Pagination page={pg.page} pages={pg.pages} onPage={pg.setPage} total={pg.total}/>}</>}
+    {live.status==='ready'&&filtered&&<p className="mut cnt-l">{list.length} data ditemukan</p>}
+    <DataState status={live.status} error={live.error} onRetry={live.retry} skeleton={<ListSkeleton view={view}/>} label="Memuat data" isEmpty={!list.length} empty={<EmptyState title={filtered?'Tidak ada hasil':tab==='arsip'?'Arsip kosong':'Belum ada '+title.toLowerCase()} text={filtered?'Coba ubah kata kunci atau filter.':tab==='arsip'?'Data yang diarsipkan akan muncul di sini.':'Data yang kamu tambahkan akan muncul di sini.'} action={filtered?<button type="button" className="btn sec" onClick={()=>{setQ('');setFv({});setRg({})}}>Hapus pencarian dan filter</button>:tab==='aktif'&&<button type="button" className="btn" onClick={()=>openForm()}><Icon name="plus" size={18}/> Tambah {title.toLowerCase()}</button>}/>}>
+      {body()}{view!=='board'&&view!=='timeline'&&<Pagination page={pg.page} pages={pg.pages} onPage={pg.setPage} total={pg.total}/>}</DataState>
 
     <Modal open={showF} title="Filter" onClose={()=>setShowF(false)} footer={<div className="row"><button type="button" className="btn sec sp" onClick={()=>{setFv({});setRg({})}}>Reset</button><button type="button" className="btn sp" onClick={()=>setShowF(false)}>Tampilkan {list.length} data</button></div>}>
       {filters.map(f=><div className="field" key={f.key}><label>{f.label}</label><Select label={f.label} value={fv[f.key]||''} placeholder={'Semua '+f.label.toLowerCase()} options={[{value:'',label:'Semua'},...optsOf(f).map(o=>({value:o,label:o}))]} onChange={v=>setFv(s=>({...s,[f.key]:v}))}/></div>)}

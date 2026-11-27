@@ -126,7 +126,7 @@ textarea.in{min-height:96px;resize:vertical}
 .bar{height:8px;background:var(--sunken);border-radius:var(--r-pill);overflow:hidden}.bar.lg{height:12px}
 .bar i{display:block;height:100%;width:100%;background:var(--primary);border-radius:var(--r-pill);transform:scaleX(var(--v,1));transform-origin:left;transition:transform .5s var(--ease)}
 .bar.accent i{background:var(--accent)}
-.sk{position:relative;display:block;overflow:hidden;background:var(--surface-2);border-radius:var(--r-sm)}.sk::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,var(--sk-hl),transparent);transform:translateX(-100%);animation:shimmer 1.4s infinite}
+.sk{position:relative;display:block;overflow:hidden;background:var(--sk);box-shadow:inset 0 0 0 1px var(--sk-edge);border-radius:var(--r-sm)}.sk::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,var(--sk-hl),transparent);transform:translateX(-100%);animation:shimmer 1.4s infinite}
 .empty-s{text-align:center;padding:var(--s10) var(--s4);max-width:420px;margin:0 auto}.empty-s.compact{padding:var(--s6) var(--s4)}
 .empty-art{width:160px;max-width:60%;height:auto;color:var(--primary);margin-bottom:var(--s3)}.empty-s h3{font-size:var(--fs-xl);margin-bottom:var(--s2)}.empty-s p{color:var(--tx2);font-size:var(--fs-sm)}
 .empty{text-align:center;padding:var(--s8);color:var(--tx2)}
@@ -223,7 +223,9 @@ textarea.in{min-height:96px;resize:vertical}
 @keyframes pop-in{from{opacity:0;transform:translateY(-4px) scale(.98)}}@keyframes pop-in-up{from{opacity:0;transform:translateY(4px) scale(.98)}}
 @keyframes toast-in{from{opacity:0;transform:translateY(-8px)}}@keyframes slide-in{from{transform:translateX(-24px);opacity:.4}}
 @keyframes shimmer{to{transform:translateX(100%)}}@keyframes pulse{50%{opacity:.45;transform:scale(.94)}}
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:1ms!important;animation-iteration-count:1!important;transition-duration:1ms!important;scroll-behavior:auto!important}.sk::after{animation:none}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:1ms!important;animation-iteration-count:1!important;transition-duration:1ms!important;scroll-behavior:auto!important}.sk::after{animation:none;display:none}}
+html[data-lowpower] .sk::after{animation:none;display:none}
+@media(forced-colors:active){.sk{background:GrayText;opacity:.35;box-shadow:none}}
 @media print{.sidebar,.sb-slot,.bottom-nav,.topbar,.toasts,.ribbon{display:none!important}.content-in{padding:0}}
 
 /* ---- Daftar data: filter, galeri, relasi, pratinjau (Batch 3) ---- */

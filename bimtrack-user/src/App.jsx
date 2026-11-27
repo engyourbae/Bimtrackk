@@ -1,9 +1,10 @@
 import {useEffect,useState} from 'react';
 import {onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,updatePassword,signOut} from 'firebase/auth';
 import {doc,onSnapshot,setDoc,getDoc,addDoc,updateDoc,collection,query,where,serverTimestamp} from 'firebase/firestore';
+import {useDocPaths} from './useData';
 import {auth,db} from './firebase';
 import {getTheme,setTheme} from './shared/theme';
-import {ToastHost,toast,Pass,Icon,Badge,ThemePick,PageHead,AuthLayout,BootScreen,Splash,Skeleton,SessionCard,startSessionGuard,markSeen,Btn,useFlash,AccountCard,LogoutButton,InstallCard} from './shared/ui';
+import {ToastHost,toast,Pass,Icon,Badge,ThemePick,PageHead,AuthLayout,BootScreen,Splash,Skeleton,SessionCard,startSessionGuard,markSeen,Btn,useFlash,AccountCard,LogoutButton,InstallCard,ErrorState} from './shared/ui';
 import {logoutUser,offlineOn,LO} from './offline';
 import {OfflineCard,NotifControl} from './Device';
 import Auth from './Auth';
@@ -24,20 +25,23 @@ function ChangePass({uid,force}){const[p,setP]=useState(''),[b,setB]=useState(fa
   const go=async()=>{if(p.length<6)return toast('Minimal 6 karakter','err');setB(true);try{await updatePassword(auth.currentUser,p);if(force)updateDoc(doc(db,'users',uid),{mustChangePassword:false}).catch(e=>toast(e.message,'err'));setP('');flash();toast('Kata sandi diganti')}catch(e){toast(e.code==='auth/requires-recent-login'?'Keluar lalu masuk lagi, kemudian ulangi':e.message,'err')}setB(false)};
   return <div className="field" style={force?undefined:{marginTop:12}}>{!force&&<label>Ganti kata sandi</label>}<Pass value={p} onChange={setP} placeholder="Kata sandi baru" auto="new-password"/><Btn className="btn" style={{width:'100%',marginTop:8}} busy={b} done={ok} onClick={go}>{ok?'Tersimpan':'Simpan'}</Btn></div>}
 export default function App(){
-  const[u,setU]=useState(undefined),[prof,setProf]=useState(undefined),[req,setReq]=useState(undefined),{page:pg,action,id:rid}=useRoute();
-  useEffect(()=>onAuthStateChanged(auth,x=>{setU(x);if(x)markSeen();setProf(undefined);setReq(undefined)}),[]);
+  const[u,setU]=useState(undefined),{page:pg,action,id:rid}=useRoute();
+  useEffect(()=>onAuthStateChanged(auth,x=>{setU(x);if(x)markSeen()}),[]);
   // kedaluwarsa sesi (hanya aktif bila dinyalakan di Pengaturan; berlaku per perangkat)
   useEffect(()=>{if(!u)return;return startSessionGuard('user',{onExpire:()=>signOut(auth),holdOffline:()=>offlineOn()&&!navigator.onLine,onWarn:()=>toast('Sesi akan berakhir dalam 1 menit karena tidak aktif. Sentuh layar untuk tetap masuk.')})},[u]);
   // pintasan papan ketik: tekan "/" untuk membuka Pencarian (tidak aktif saat mengetik atau saat dialog terbuka)
   useEffect(()=>{if(!u)return;const f=e=>{if(e.key!=='/'||e.ctrlKey||e.metaKey||e.altKey||document.body.classList.contains('lock'))return;const t=e.target;if(/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)||t.isContentEditable)return;e.preventDefault();navigate('cari')};document.addEventListener('keydown',f);return()=>document.removeEventListener('keydown',f)},[u]);
-  useEffect(()=>{if(!u)return;const a=onSnapshot(doc(db,'users',u.uid),s=>setProf(s.exists()?s.data():null),()=>setProf(null));const b=onSnapshot(doc(db,'registrationRequests',u.uid),s=>setReq(s.exists()?s.data():null),()=>setReq(null));return()=>{a();b()}},[u]);
+  // profil + permintaan pendaftaran: memuat / galat / offline dibedakan dari "belum ada" (tidak lagi dianggap menunggu persetujuan saat galat)
+  const pl=useDocPaths(u?[{key:'prof',path:['users',u.uid]},{key:'req',path:['registrationRequests',u.uid]}]:[],u?.uid||''),
+    prof=pl.d.prof?(pl.d.prof[0]??null):undefined,req=pl.d.req?(pl.d.req[0]??null):undefined;
   let body;
   // boot = status masuk belum diketahui. Setelah itu splash naik; selama profil dimuat tampil kerangka skeleton seluruh aplikasi.
-  const boot=u===undefined,loadingApp=!!u&&(prof===undefined||req===undefined);
+  const boot=u===undefined,loadingApp=!!u&&pl.status==='loading';
   if(boot)body=<BootScreen/>;
   else if(!u)body=<Auth/>;
   else if(loadingApp){const page=PAGES.includes(pg)?pg:'home';
     body=<AppShell loading nav={NAV} page={ALIAS[page]||page} onNavigate={k=>navigate(k)} onLogout={logoutUser} logoutOpts={LO} topSlot={<Skeleton w={44} h={44} r={22}/>}><PageSkeleton page={page} label={NAV.find(n=>n.k===(ALIAS[page]||page))?.label}/></AppShell>}
+  else if(['error','timeout','offline'].includes(pl.status))body=<AuthLayout panel={false} title="Akunmu belum bisa dimuat" sub="Data akun diperlukan sebelum aplikasi bisa dibuka."><ErrorState compact kind={pl.status} error={pl.error} onRetry={pl.retry}/><LogoutButton onLogout={logoutUser} {...LO} className="btn sec block"/></AuthLayout>;
   else if(!prof?.approved)body=<AuthLayout panel={false} title={req?.status==='rejected'?'Pendaftaran ditolak':req?.status==='approved'?'Akses dinonaktifkan':'Menunggu persetujuan admin'} sub={req?.status==='rejected'?('Alasan: '+(req.reason||'-')):req?'Akun kamu belum dapat membuka data skripsi. Halaman ini akan terbuka otomatis setelah disetujui.':'Memproses pendaftaran…'}><LogoutButton onLogout={logoutUser} {...LO} className="btn sec block"/></AuthLayout>;
   else if(prof.mustChangePassword)body=<AuthLayout panel={false} title="Buat kata sandi baru" sub="Sandi sementara harus diganti dulu sebelum melanjutkan."><ChangePass uid={u.uid} force/></AuthLayout>;
   else{const du=prof.dataUid||u.uid;

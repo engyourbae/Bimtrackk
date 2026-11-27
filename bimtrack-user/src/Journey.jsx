@@ -2,7 +2,8 @@ import {useState} from 'react';
 import {useCols} from './useData';
 import Formula from './Formula';
 import {setFilter} from './Crud';
-import {PageHead,Icon,Badge,Progress,EmptyState,Skeleton,Timeline} from './shared/ui';
+import {PageHead,Icon,Badge,Progress,EmptyState,DataState,Timeline,Skeleton} from './shared/ui';
+import Skripsi from './Skripsi';
 import {navigate} from '@shared/router';
 import {todayStr,fmtDate} from '@shared/date';
 import {calcProgress,STATUS_TONE} from './progress';
@@ -10,14 +11,16 @@ const COLS=['bimbingan','revisi','rundown'];
 const go=(col,page,bab)=>{setFilter(col,{bab});navigate(page)};
 /** Perjalanan Skripsi: posisi tiap bab (Bab I–V), dihitung dari data bimbingan, revisi, dan rundown milik sendiri. */
 export default function Journey({uid}){
-  const d=useCols(COLS,uid),[how,setHow]=useState(false);
-  if(!COLS.every(c=>d[c]))return <div><PageHead title="Perjalanan Skripsi"/><div className="stack"><Skeleton h={140} r={16}/><Skeleton h={170} r={16}/><Skeleton h={170} r={16}/></div></div>;
+  const live=useCols(COLS,uid),d=live.d,[how,setHow]=useState(false);
+  if(live.status!=='ready')return <div><PageHead title="Perjalanan Skripsi"/><Skripsi uid={uid}/><div style={{height:'var(--s4)'}}/>
+    <DataState status={live.status} error={live.error} onRetry={live.retry} label="Memuat perjalanan skripsi" skeleton={<div className="stack"><Skeleton h={140} r={16}/><Skeleton h={170} r={16}/><Skeleton h={170} r={16}/></div>}/></div>;
   const t=todayStr(),P=calcProgress({...d,today:t}),empty=COLS.every(c=>!d[c].length),
     steps=[...d.bimbingan.filter(x=>x.status==='Terlaksana'&&x.tanggal).map(x=>({key:'b'+x.id,date:x.tanggal,icon:'bimbingan',title:`${x.bab||'Umum'}: ${x.topik||'Bimbingan'}`,lbl:'Bimbingan'})),
       ...d.revisi.filter(x=>x.tanggalSelesai).map(x=>({key:'r'+x.id,date:x.tanggalSelesai,icon:'check',title:`${x.bab||'Umum'}: ${(x.catatan||'Revisi').slice(0,70)}`,lbl:'Revisi selesai',tone:'ok'}))]
       .sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:0).slice(0,8);
   return <div>
     <PageHead title="Perjalanan Skripsi" sub="Posisi tiap bab dari Bab I sampai Bab V, dihitung dari datamu sendiri" actions={<button type="button" className="btn sec" onClick={()=>setHow(true)}><Icon name="info" size={18}/> Cara menghitung</button>}/>
+    <Skripsi uid={uid}/><div style={{height:'var(--s4)'}}/>
     {empty?<EmptyState title="Perjalananmu belum dimulai" text="Catat bimbingan, revisi, atau kegiatan rundown dan beri bab. Progres tiap bab akan muncul di sini." action={<button type="button" className="btn" onClick={()=>navigate('bim','baru')}><Icon name="plus" size={18}/> Catat bimbingan pertama</button>}/>:<>
     <section className="card" aria-label="Progres keseluruhan"><div className="big"><b className="num">{P.overall}%</b><span>dari Bab I sampai Bab V</span></div><Progress value={P.overall} size="lg" label="Progres keseluruhan"/></section>
     <div className="jr">{P.babs.map(b=>{const nb=d.bimbingan.filter(x=>x.bab===b.bab).length,last=d.bimbingan.filter(x=>x.bab===b.bab&&x.status==='Terlaksana'&&x.tanggal).map(x=>x.tanggal).sort().pop();

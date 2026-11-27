@@ -2,7 +2,7 @@ import {useEffect,useMemo,useState} from 'react';
 import {useCols} from './useData';
 import Crud from './Crud';
 import Cal from './Cal';
-import {PageHead,Segmented,Badge,Icon,Switch,Skeleton,toast} from './shared/ui';
+import {PageHead,Segmented,Badge,Icon,Switch,Skeleton,DataState,toast} from './shared/ui';
 import {navigate} from '@shared/router';
 import {todayStr,relDay,addDays,HARI,BULAN_S} from '@shared/date';
 import {JDW,RUN,BAB,JDW_TONE,RUN_TONE} from './config';
@@ -38,12 +38,12 @@ function HistoryHead({rows}){
   return <div className="mini"><Badge tone="ok">Selesai {n('Selesai')}</Badge><Badge tone="danger">Dibatalkan {n('Dibatalkan')}</Badge><Badge tone="warn">Dijadwalkan ulang {n('Dijadwalkan ulang')}</Badge>{stale>0&&<Badge tone="warn">Belum diperbarui {stale}</Badge>}</div>}
 
 function JadwalTab({uid,autoNew,onAutoNew,openId,onOpenId}){
-  const rows=useCols(['jadwal'],uid).jadwal,[sub,setSub]=useState(()=>['minggu','bulan','riwayat'].includes(ls('bimtrack-jdw-sub'))?ls('bimtrack-jdw-sub'):'minggu'),today=todayStr(),hist=sub==='riwayat';
+  const live=useCols(['jadwal'],uid),rows=live.status==='ready'?live.d.jadwal:null,[sub,setSub]=useState(()=>['minggu','bulan','riwayat'].includes(ls('bimtrack-jdw-sub'))?ls('bimtrack-jdw-sub'):'minggu'),today=todayStr(),hist=sub==='riwayat';
   const pick=v=>{setSub(v);ls('bimtrack-jdw-sub',v)},open=id=>navigate('jdw',id);
   const[nt,setNt]=useState(0);useEffect(()=>onNotifChange(()=>setNt(x=>x+1)),[]);
   useEffect(()=>{if(!rows)return;return scheduleNotifs(rows)},[rows,nt]);
   return <div>
-    {!rows?<div className="stack"><Skeleton h={150} r={16}/><Skeleton h={260} r={16}/></div>:<Reminders rows={rows} onOpen={open}/>}
+    {!rows?(live.status==='loading'&&/* galat/offline ditampilkan satu kali oleh daftar di bawah */<DataState status="loading" label="Memuat jadwal" skeleton={<div className="stack"><Skeleton h={150} r={16}/><Skeleton h={260} r={16}/></div>}/>):<Reminders rows={rows} onOpen={open}/>}
     <div className="subtabs"><Segmented label="Tampilan jadwal" value={sub} onChange={pick} options={[{value:'minggu',label:'Mingguan',icon:'week'},{value:'bulan',label:'Bulanan',icon:'jadwal'},{value:'riwayat',label:'Riwayat',icon:'history'}]}/></div>
     {rows&&(sub==='minggu'?<WeekView rows={rows} onOpen={open}/>:sub==='bulan'?<Cal rows={rows} onOpen={open}/>:<HistoryHead rows={rows}/>)}
     <Crud embedded col="jadwal" uid={uid} title="Jadwal" listTitle={hist?'Riwayat pertemuan':'Pertemuan mendatang'} fields={JDW} titleKey="agenda" subKeys={['tanggal','jam','dosen','lokasi']} statusKey="status" tones={JDW_TONE}

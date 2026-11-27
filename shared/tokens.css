@@ -15,7 +15,7 @@
   --ok:#2B6A4F;--ok-soft:#DCEBE3;
   --info:#2F5370;--info-soft:#E0E9F0;
   --panel-bg:var(--primary);--panel-tx:#F7F7F4;--panel-tx2:rgba(247,247,244,.86);--panel-line:rgba(247,247,244,.18);--panel-gold:#9BD0BA;
-  --scrim:rgba(23,43,58,.5);--on-danger:#FFFFFF;--sk-hl:rgba(255,255,255,.65);
+  --scrim:rgba(23,43,58,.5);--on-danger:#FFFFFF;--sk:#D9D6CC;--sk-edge:rgba(23,43,58,.12);--sk-hl:rgba(255,255,255,.75);
   /* logo */
   --logo-ink:#172B3A;--logo-g:#4E8874;--logo-bg:var(--surface-2);
   /* tekstur kertas: noise statis, opasitas rendah (tanpa animasi) */
@@ -57,7 +57,7 @@
   --ok:#86D2A8;--ok-soft:#1B3328;
   --info:#A9C6DE;--info-soft:#1F3347;
   --panel-bg:#1C3345;--panel-tx:#F1F1EC;--panel-tx2:#B8C4CC;--panel-line:rgba(241,241,236,.14);--panel-gold:#8CC4AE;
-  --scrim:rgba(0,0,0,.62);--on-danger:#2A0F0D;--sk-hl:rgba(255,255,255,.07);
+  --scrim:rgba(0,0,0,.62);--on-danger:#2A0F0D;--sk:#2A4358;--sk-edge:rgba(255,255,255,.08);--sk-hl:rgba(255,255,255,.12);
   --logo-ink:#F1F1EC;--logo-g:#6FAE96;--logo-bg:var(--surface);
   --paper:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .85 0 0 0 0 .92 0 0 0 0 1 .22 0 0 0 -.07'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   --hl:inset 0 1px 0 rgba(255,255,255,.06);
