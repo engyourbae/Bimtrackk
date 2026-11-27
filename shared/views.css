@@ -112,7 +112,7 @@
 /* ---------- Indikator geser: tab (Segmented), navigasi bawah, menu samping ----------
    Dipasang oleh useSlider (shared/motion.js): kontainer diberi [data-sl] + --sl-x/y/w/h dari elemen aktif.
    Latar aktif digambar sebagai ::before kontainer yang meluncur ke posisi baru; latar aktif bawaan dimatikan hanya selama [data-sl] ada. */
-[data-sl]{position:relative}
+[data-sl]:not(.bottom-nav){position:relative}/* .bottom-nav tetap position:fixed (base.css); fixed sudah jadi acuan posisi ::before */
 [data-sl]::before,.sb-nav[data-sl]::after{content:'';position:absolute;left:0;top:0;width:var(--sl-w,0);height:var(--sl-h,0);transform:translate(var(--sl-x,0),var(--sl-y,0));pointer-events:none;
   transition:transform 380ms cubic-bezier(.3,1.2,.4,1),width 380ms cubic-bezier(.3,1.2,.4,1),height 380ms cubic-bezier(.3,1.2,.4,1)}
 [data-sl-i]::before,.sb-nav[data-sl-i]::after{transition:none}
@@ -127,3 +127,12 @@
 .sb-nav[data-sl] .nav-item.on::before{content:none}
 .sw-track{transition:background-color 240ms var(--ease)}
 @media(prefers-reduced-motion:reduce){[data-sl]::before,.sb-nav[data-sl]::after{transition:none}.seg button,.nav-item,.bn-i,.sw-track{transition:none}}
+
+/* ---------- Tombol urutan (Terdekat/Terjauh): lebar mengikuti label terpanjang, teks bergeser saat beralih ----------
+   Kedua label ditumpuk di satu sel grid, jadi lebar tombol selalu sama; label tidak aktif bergeser keluar (atas/bawah) dan memudar. */
+.sort-t{display:inline-grid;overflow:hidden;padding:1px 0;text-align:left}
+.sort-t>span{grid-area:1/1;transition:transform 280ms cubic-bezier(.3,1.2,.4,1),opacity 200ms var(--ease);opacity:0}
+.sort-t>span:first-child{transform:translateY(-120%)}
+.sort-t>span:last-child{transform:translateY(120%)}
+.sort-t>span.on{transform:none;opacity:1}
+@media(prefers-reduced-motion:reduce){.sort-t>span{transition:none}}

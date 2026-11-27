@@ -112,7 +112,7 @@ export default function Crud({col,uid,title,heading,listTitle,embedded,fields,ti
     <div className="toolbar">
       <div className="search"><Icon name="cari"/><input className="in" placeholder="Cari..." aria-label={'Cari '+title.toLowerCase()} value={q} onChange={e=>setQ(e.target.value)}/></div>
       {(filters.length>0||dateKey)&&<button type="button" className="btn sec" onClick={()=>setShowF(true)} aria-label="Buka filter"><Icon name="filter" size={18}/> Filter{nf>0&&<span className="cnt">{nf}</span>}</button>}
-      <button type="button" className="btn sec" onClick={()=>setDesc(!desc)} aria-label="Ubah urutan"><Icon name="sort" size={18}/> {desc?sortLabels[0]:sortLabels[1]}</button>
+      <button type="button" className="btn sec" onClick={()=>setDesc(!desc)} aria-label={'Ubah urutan, sekarang '+(desc?sortLabels[0]:sortLabels[1])}><Icon name="sort" size={18}/><span className="sort-t">{sortLabels.map((l,i)=><span key={l} className={(desc?i===0:i===1)?'on':''} aria-hidden="true">{l}</span>)}</span></button>
       {views.length>1&&<Segmented label="Tampilan" value={view} onChange={pickView} options={views.map(v=>VL[v])}/>}</div>
     {nf>0&&<div className="fchips">{filters.filter(f=>fv[f.key]).map(f=><button type="button" className="fchip" key={f.key} onClick={()=>setFv(s=>({...s,[f.key]:''}))}>{f.label}: {fv[f.key]} <Icon name="x" size={14}/><span className="sr">Hapus filter</span></button>)}
       {(rg.from||rg.to)&&<button type="button" className="fchip" onClick={()=>setRg({})}>{rg.from?fmtDate(rg.from,'sedang'):'…'} – {rg.to?fmtDate(rg.to,'sedang'):'…'} <Icon name="x" size={14}/><span className="sr">Hapus filter tanggal</span></button>}
