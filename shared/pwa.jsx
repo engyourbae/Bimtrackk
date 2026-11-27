@@ -3,7 +3,7 @@ import {Icon} from './icons';
 import {Btn,Badge,toast} from './ui/core';
 
 /* ---------- Status instal, pembaruan, dan online (dipakai user dan admin) ---------- */
-let deferred=null,waiting=null,asked=false,rev=0;
+let deferred=null,waiting=null,asked=false,stale=false,regRef=null,rev=0;
 const subs=new Set(),emit=()=>{rev++;subs.forEach(f=>f(rev))};
 const useTick=()=>{const[,s]=useState(0);useEffect(()=>{subs.add(s);return()=>subs.delete(s)},[])};
 if(typeof window!=='undefined'){
@@ -19,9 +19,16 @@ const isIOS=()=>/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platfo
 /** Daftarkan service worker (scope = folder aplikasi, sehingga cocok di sub-path GitHub Pages). Hanya di build produksi. */
 export function registerPwa(){
   if(!('serviceWorker' in navigator)||!import.meta.env.PROD)return;
-  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(asked)location.reload()});
+  const hadController=!!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
+    if(asked){location.reload();return}
+    // service worker baru sudah aktif tanpa tombol ini ditekan (mis. di jendela/tab lain): halaman ini masih memakai kode lama
+    if(hadController){waiting=null;stale=true;emit()}});
   const start=()=>navigator.serviceWorker.register('./service-worker.js').then(reg=>{
-    const mark=()=>{if(reg.waiting&&navigator.serviceWorker.controller){waiting=reg.waiting;emit()}};
+    regRef=reg;
+    const mark=()=>{const w=reg.waiting&&navigator.serviceWorker.controller?reg.waiting:null;
+      if(w!==waiting){waiting=w;emit()}
+      if(w)w.addEventListener('statechange',()=>{if(w.state==='redundant'||w.state==='activated')mark()},{once:true})};
     mark();
     reg.addEventListener('updatefound',()=>{const w=reg.installing;w&&w.addEventListener('statechange',()=>{if(w.state==='installed')mark()})});
     const chk=()=>reg.update().catch(()=>{});
@@ -30,13 +37,22 @@ export function registerPwa(){
   }).catch(()=>{});
   document.readyState==='complete'?start():addEventListener('load',start,{once:true});
 }
-const applyUpdate=()=>{if(!waiting)return;asked=true;waiting.postMessage({type:'SKIP_WAITING'})};
+/** Pasang versi baru: minta service worker yang menunggu untuk aktif; halaman dimuat ulang saat service worker berganti. */
+async function applyUpdate(){
+  asked=true;
+  let w=waiting;
+  try{const reg=regRef||await navigator.serviceWorker.getRegistration();if(reg&&reg.waiting)w=reg.waiting}catch{}
+  if(!w||w.state==='redundant'||w.state==='activated'){location.reload();return}   // tidak ada lagi yang menunggu: cukup muat ulang
+  w.postMessage({type:'SKIP_WAITING'});
+  setTimeout(()=>location.reload(),4000);   // jaga-jaga bila controllerchange tidak datang
+}
 
 /** Pita offline dan pembaruan versi. Pembaruan hanya dipasang setelah pengguna menekan Perbarui. */
 export function PwaNotices({offlineText}){
-  useTick();const on=useOnline();
+  useTick();const on=useOnline(),[busy,setBusy]=useState(false);
   return <>{!on&&<div className="banner" role="status">{offlineText}</div>}
-    {waiting&&<div className="banner info" role="status"><span>Versi baru BIMTRACK sudah diunduh dan siap dipasang.</span><button type="button" className="btn sm" onClick={applyUpdate}>Perbarui</button></div>}</>}
+    {stale&&<div className="banner info" role="status"><span>BIMTRACK sudah diperbarui. Muat ulang halaman untuk memakai versi baru.</span><button type="button" className="btn sm" onClick={()=>location.reload()}>Muat ulang</button></div>}
+    {waiting&&!stale&&<div className="banner info" role="status"><span>Versi baru BIMTRACK sudah diunduh dan siap dipasang.</span><Btn className="btn sm" busy={busy} onClick={()=>{setBusy(true);applyUpdate()}}>{busy?'Memperbarui…':'Perbarui'}</Btn></div>}</>}
 
 /** Kartu Pengaturan: pasang aplikasi (Android/desktop lewat prompt Chrome, iOS lewat petunjuk) dan status offline. */
 export function InstallCard(){
