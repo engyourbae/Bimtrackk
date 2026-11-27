@@ -18,7 +18,7 @@ import SesiGate from './SesiGate';
 import SyncStatus from './SyncStatus';
 // Halaman yang jarang dipakai dimuat malas (chunk terpisah). Semua chunk tetap masuk precache PWA (shared/pwa-plugin.js), jadi tetap terbuka offline.
 const Journey=lazy(()=>import('./Journey')),JadwalPage=lazy(()=>import('./Jadwal')),Laporan=lazy(()=>import('./Laporan')),Search=lazy(()=>import('./Search')),
-  Jejak=lazy(()=>import('./Jejak')),Bantuan=lazy(()=>import('./Bantuan')),Settings=lazy(()=>import('./Settings')),ChangePass=lazy(()=>import('./Settings').then(m=>({default:m.ChangePass})));
+  Jejak=lazy(()=>import('./Jejak')),Dosen=lazy(()=>import('./Dosen')),Panduan=lazy(()=>import('./Panduan')),Bantuan=lazy(()=>import('./Bantuan')),Settings=lazy(()=>import('./Settings')),ChangePass=lazy(()=>import('./Settings').then(m=>({default:m.ChangePass})));
 export default function App(){
   const[u,setU]=useState(undefined),{page:pg,action,id:rid}=useRoute();
   useEffect(()=>onAuthStateChanged(auth,x=>{if(!x)resetData();setU(x);if(x)markSeen()}),[]);
@@ -55,6 +55,8 @@ export default function App(){
       {page==='bkt'&&<Crud autoNew={auto('bkt')} onAutoNew={done} openId={opn('bkt')} onOpenId={done} col="fotoRevisi" uid={du} title="Bukti Revisi" heading="Dokumentasi & Bukti" fields={BKT} titleKey="nama" subKeys={['tanggal','jenis']} filters={[{key:'jenis',label:'Jenis',options:BKT[1].options}]} range="tanggal" archivable views={['gallery','list']} defaults={()=>({tanggal:todayStr()})} urlKey="url"/>}
       {(page==='rin'||page==='csv')&&<Laporan uid={du} tab={page} prof={prof}/>}{page==='cari'&&<Search uid={du}/>}
       {page==='jjk'&&<Jejak uid={du} autoNew={auto('jjk')} onAutoNew={done} openId={opn('jjk')} onOpenId={done}/>}
+      {page==='pdn'&&<Panduan uid={du}/>}
+      {page==='dsn'&&<Dosen uid={du} autoNew={auto('dsn')} onAutoNew={done} openId={opn('dsn')} onOpenId={done}/>}
       {page==='bantuan'&&<Bantuan/>}
       {page==='set'&&<Settings prof={prof} uid={u.uid}/>}
     </Suspense></PageBoundary></AppShell></SesiGate>}

@@ -27,8 +27,8 @@ Siapkan: 2 akun mahasiswa (A dan B), 1 akun admin, dan 2 perangkat/peramban berb
 
 ## 3. Dasbor: judul skripsi dan progres
 - [ ] Belum ada judul: kartu "Judul skripsi" mengajak mengisi; tombol Isi judul membuka Perjalanan
-- [ ] Isi judul di Perjalanan: kembali ke dasbor, judul tampil rata tengah dan menyempit ke bawah (segitiga terbalik), tanpa kata terpotong
-- [ ] Uji judul pendek (3 kata), sedang (±60 karakter), dan panjang (±150 karakter) di lebar HP 360 px dan layar 1280 px: tidak terpotong, tidak keluar kartu, huruf masih terbaca
+- [ ] Isi judul di Perjalanan: kembali ke dasbor, judul tampil sebagai teks biasa rata kiri yang membungkus alami, seluruh judul terlihat tanpa terpotong
+- [ ] Uji judul pendek (3 kata), sedang (±60 karakter), panjang (±150 karakter), dan 300 karakter di lebar HP 360 px dan layar 1280 px: seluruh judul terlihat, ukuran huruf sama, kartu tidak melebar berlebihan; ulangi di tema Gelap dan semua pilihan warna
 - [ ] Ubah status judul (Draf, Diajukan, Disetujui, Perlu diganti): lencana di dasbor ikut berubah
 - [ ] Judul bisa disalin dengan menyentuh lama
 - [ ] Kartu Progres skripsi: tombol "Cara menghitung" dan "Perjalanan" sejajar sama lebar di HP, satu baris dengan judul di layar lebar
@@ -78,9 +78,28 @@ Siapkan: 2 akun mahasiswa (A dan B), 1 akun admin, dan 2 perangkat/peramban berb
 - [ ] HP 360 px, HP besar, tablet, laptop: tidak ada teks terpotong atau tergeser ke samping
 - [ ] Tema Terang, Gelap, Sistem; tabel dan kartu terbaca di Gelap
 - [ ] Animasi mulus; dengan "kurangi gerakan" aktif di perangkat, animasi hampir tidak ada
-- [ ] Pembaca layar (TalkBack/VoiceOver): judul skripsi dibaca utuh satu kalimat, bukan per baris
+- [ ] Pembaca layar (TalkBack/VoiceOver): judul skripsi dibaca utuh satu kalimat
 
 ## 11. Keamanan, uji dengan sengaja
 - [ ] Buka Firestore dari konsol peramban dengan akun mahasiswa B untuk membaca koleksi milik A: ditolak
 - [ ] Akun belum disetujui tidak bisa membaca atau menulis apa pun
 - [ ] Kunci API sudah dibatasi ke domain situs (Google Cloud Console > Credentials)
+
+## 12. Batch 7: dosen dan pejabat, panduan alur
+Prasyarat: `firestore.rules` terbaru sudah diterbitkan.
+- [ ] Dosen dan Pejabat: tambah 3 pembimbing, 2 penguji, Kaprodi, Dekan, Rektor, dan satu "Peran lain" (nama peran wajib diisi): nomor otomatis 1, 2, 3 dan 1, 2; tombol Tambah tetap ada sesudah banyak data
+- [ ] Naikkan/Turunkan lewat menu kartu dan di Detail: nomor ikut berganti; tombol tidak aktif di paling atas/bawah; urutan tidak tercampur antar peran
+- [ ] Hapus pembimbing 1: yang lama menjadi 1 (nomor merapikan diri); hapus lewat konfirmasi
+- [ ] Ubah peran satu orang ke peran lain: pindah ke akhir kelompok barunya
+- [ ] Nama lebih dari 150 karakter ditolak dengan pesan di formulir (bukan galat server)
+- [ ] Bimbingan dan Jadwal, isian Dosen: nama dari daftar muncul sebagai pilihan (cek di Android dan iPhone), tetap bisa mengetik nama lain; daftar kosong: ada petunjuk
+- [ ] Pencarian global menemukan nama dosen dan membuka detailnya; ekspor CSV berurutan; backup lalu Pulihkan di akun lain: daftar dan urutan terbawa; impor CSV memberi urutan lanjutan
+- [ ] Sebelum rules diterbitkan: halaman Dosen menampilkan galat + Coba lagi, Bimbingan tetap normal
+- [ ] Panduan (admin): tambah kategori "Pengajuan Outline sampai Seminar Proposal" sebagai draf, tambah 3 langkah (satu dengan tautan Drive, satu dengan syarat berbaris); tautan non-Drive/http ditolak di formulir
+- [ ] Mahasiswa belum melihat apa pun selama draf; terbitkan kategori: langkah berstatus terbit tampil, langkah draf tetap tersembunyi; jadikan draf lagi: semua hilang dari mahasiswa
+- [ ] Urutkan kategori dan langkah di admin: urutan sama di aplikasi mahasiswa; "Diperbarui" berubah setelah edit isi
+- [ ] Hapus langkah dan hapus kategori (konfirmasi menyebut jumlah langkah); batas 12 kategori dan 40 langkah menonaktifkan tombol Tambah
+- [ ] Audit log admin mencatat setiap tambah/ubah/terbit/draf/urut/hapus panduan dengan keterangan
+- [ ] Mahasiswa: cari, filter kategori, buka langkah, Buka di Drive; centang "Sudah saya lewati" (tidak mengubah persen di dasbor); hitungan "x dari n" benar
+- [ ] Matikan internet setelah membuka Panduan: tetap terbaca dengan keterangan salinan; di HP 360 px tidak ada teks terpotong; tema Gelap dan semua warna terbaca
+- [ ] Uji sengaja dari konsol dengan akun mahasiswa: tulis ke panduanKategori/panduanLangkah ditolak; baca langkah draf ditolak; akun belum disetujui tidak bisa membaca

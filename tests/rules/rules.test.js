@@ -27,6 +27,11 @@ const seed=async()=>{
     await w('registrationRequests/u2',{uid:'u2',nim:'222',nama:'B',prodi:'P',fakultas:'F',universitas:'U',status:'pending',createdAt:OLD});
     await w('resetRequests/rr1',{nim:'111',nama:'A',status:'pending',createdAt:OLD});
     await w('nimVersion/111',{v:1});
+    await w('panduanKategori/k1',{id:'k1',judul:'Seminar Proposal',urutan:0,terbit:true,createdAt:OLD,updatedAt:OLD});
+    await w('panduanKategori/kd',{id:'kd',judul:'Masih draf',urutan:1,terbit:false,createdAt:OLD,updatedAt:OLD});
+    await w('panduanLangkah/l1',{id:'l1',kategoriId:'k1',judul:'Ajukan',isi:'Isi',urutan:0,terbit:true,kategoriTerbit:true,tampil:true,createdAt:OLD,updatedAt:OLD});
+    await w('panduanLangkah/ld',{id:'ld',kategoriId:'kd',judul:'Di draf',isi:'Isi',urutan:0,terbit:true,kategoriTerbit:false,tampil:false,createdAt:OLD,updatedAt:OLD});
+    await w('dosenPejabat/d1',{id:'d1',ownerUid:'u1',peran:'Dosen pembimbing',nama:'Dr. Ani',urut:0,createdAt:OLD,updatedAt:OLD});
     await w('aktivitas/a1',{adminUid:'adm1',action:'accept',createdAt:OLD});
   });
 };
@@ -260,5 +265,147 @@ describe('pendaftaran, reset sandi, versi NIM, audit log',()=>{
     await assertFails(deleteDoc(ref(as('adm1'),'aktivitas/a1')));
     await assertSucceeds(getDoc(ref(as('adm1'),'aktivitas/a1')));
     await assertFails(getDoc(ref(as('u1'),'aktivitas/a1')));
+  });
+});
+
+describe('dosenPejabat (daftar dosen dan pejabat, aturan ketat)',()=>{
+  const dp=(id,o={})=>({id,ownerUid:'u2',peran:'Dosen penguji',peranLain:'',nama:'Dr. Budi, M.Si.',nip:'',kontak:'',catatan:'',urut:0,createdAt:now(),updatedAt:now(),...o});
+  it('pemilik membuat, mengubah, dan menghapus miliknya; jumlah tidak dibatasi',async()=>{
+    await assertSucceeds(setDoc(ref(as('u2'),'dosenPejabat/x1'),dp('x1')));
+    for(let i=2;i<8;i++)await assertSucceeds(setDoc(ref(as('u2'),'dosenPejabat/x'+i),dp('x'+i,{urut:i})));
+    await assertSucceeds(updateDoc(ref(as('u2'),'dosenPejabat/x1'),{nama:'Dr. Budi Baru',urut:3,updatedAt:now()}));
+    await assertSucceeds(deleteDoc(ref(as('u2'),'dosenPejabat/x1')));
+  });
+  it('peran harus salah satu daftar baku; "Peran lain" wajib punya nama peran',async()=>{
+    await assertFails(setDoc(ref(as('u2'),'dosenPejabat/x1'),dp('x1',{peran:'Dosen wali'})));
+    await assertFails(setDoc(ref(as('u2'),'dosenPejabat/x2'),dp('x2',{peran:'Peran lain',peranLain:''})));
+    await assertSucceeds(setDoc(ref(as('u2'),'dosenPejabat/x3'),dp('x3',{peran:'Peran lain',peranLain:'Wakil Dekan'})));
+    for(const p of ['Dosen pembimbing','Dosen penguji','Ketua Program Studi','Dekan','Rektor'])await assertSucceeds(setDoc(ref(as('u2'),'dosenPejabat/p'+p.length),dp('p'+p.length,{peran:p})));
+  });
+  it('menolak: field asing, nama kosong atau > 150, kolom melebihi batas, urut tidak sah, tipe salah',async()=>{
+    await assertFails(setDoc(ref(as('u2'),'dosenPejabat/a1'),dp('a1',{foo:1})));
+    await assertFails(setDoc(ref(as('u2'),'dosenPejabat/a2'),dp('a2',{nama:''})));
+    await assertFails(setDoc(ref(as('u2'),'dosenPejabat/a3'),dp('a3',{nama:'x'.repeat(151)})));
+    await assertSucceeds(setDoc(ref(as('u2'),'dosenPejabat/a4'),dp('a4',{nama:'x'.repeat(150)})));
+    await assertFails(setDoc(ref(as('u2'),'dosenPejabat/a5'),dp('a5',{nip:'1'.repeat(41)})));
+    await assertFails(setDoc(ref(as('u2'),'dosenPejabat/a6'),dp('a6',{kontak:'k'.repeat(121)})));
+    await assertFails(setDoc(ref(as('u2'),'dosenPejabat/a7'),dp('a7',{catatan:'c'.repeat(1001)})));
+    await assertFails(setDoc(ref(as('u2'),'dosenPejabat/a8'),dp('a8',{urut:-1})));
+    await assertFails(setDoc(ref(as('u2'),'dosenPejabat/a9'),dp('a9',{urut:10000})));
+    await assertFails(setDoc(ref(as('u2'),'dosenPejabat/b1'),dp('b1',{urut:1.5})));
+    await assertFails(setDoc(ref(as('u2'),'dosenPejabat/b2'),dp('b2',{nama:123})));
+  });
+  it('ownerUid harus milik sendiri, id = ID dokumen; tidak bisa pindah pemilik',async()=>{
+    await assertFails(setDoc(ref(as('u2'),'dosenPejabat/c1'),dp('c1',{ownerUid:'u1'})));
+    await assertFails(setDoc(ref(as('u2'),'dosenPejabat/c2'),dp('lain')));
+    await assertFails(updateDoc(ref(as('u1'),'dosenPejabat/d1'),{ownerUid:'u2'}));
+    await assertFails(updateDoc(ref(as('u1'),'dosenPejabat/d1'),{createdAt:Timestamp.fromDate(new Date('2030-01-01'))}));
+    await assertSucceeds(updateDoc(ref(as('u1'),'dosenPejabat/d1'),{urut:1,updatedAt:now()}));
+  });
+  it('mahasiswa lain, akun belum disetujui, sandi sementara, dan anonim ditolak; admin hanya membaca',async()=>{
+    await assertSucceeds(getDoc(ref(as('u1'),'dosenPejabat/d1')));
+    await assertSucceeds(getDoc(ref(as('adm1'),'dosenPejabat/d1')));
+    await assertFails(getDoc(ref(as('u2'),'dosenPejabat/d1')));
+    await assertFails(getDoc(ref(anon(),'dosenPejabat/d1')));
+    await assertFails(updateDoc(ref(as('u2'),'dosenPejabat/d1'),{nama:'Curang'}));
+    await assertFails(deleteDoc(ref(as('u2'),'dosenPejabat/d1')));
+    await assertFails(setDoc(ref(as('adm1'),'dosenPejabat/ad'),dp('ad',{ownerUid:'u1'})));
+    await assertFails(updateDoc(ref(as('adm1'),'dosenPejabat/d1'),{nama:'Admin'}));
+    await assertFails(deleteDoc(ref(as('adm1'),'dosenPejabat/d1')));
+    await assertFails(setDoc(ref(as('pend'),'dosenPejabat/p1'),dp('p1',{ownerUid:'pend'})));
+    await assertFails(setDoc(ref(as('tmp'),'dosenPejabat/t1'),dp('t1',{ownerUid:'tmp'})));
+  });
+  it('daftar: query milik sendiri berhasil, milik orang lain ditolak; akun hasil reset sandi menulis atas nama pemilik lama',async()=>{
+    await assertSucceeds(getDocs(query(collection(as('u1'),'dosenPejabat'),where('ownerUid','==','u1'))));
+    await assertFails(getDocs(query(collection(as('u2'),'dosenPejabat'),where('ownerUid','==','u1'))));
+    await assertSucceeds(setDoc(ref(as('u1b'),'dosenPejabat/r1'),dp('r1',{ownerUid:'u1'})));
+  });
+});
+
+describe('panduan alur (ditulis admin, dibaca mahasiswa)',()=>{
+  const kat=(id,o={})=>({id,judul:'Seminar Hasil',urutan:2,terbit:false,createdAt:now(),updatedAt:now(),...o});
+  const lgk=(id,o={})=>({id,kategoriId:'k1',judul:'Daftar',isi:'Isi langkah',syarat:'KRS',lama:'1 minggu',url:'https://drive.google.com/file/d/abc',urutan:1,terbit:true,kategoriTerbit:true,tampil:true,createdAt:now(),updatedAt:now(),...o});
+  it('mahasiswa tidak bisa membuat, mengubah, atau menghapus kategori maupun langkah',async()=>{
+    await assertFails(setDoc(ref(as('u1'),'panduanKategori/n1'),kat('n1')));
+    await assertFails(updateDoc(ref(as('u1'),'panduanKategori/k1'),{judul:'Curang'}));
+    await assertFails(deleteDoc(ref(as('u1'),'panduanKategori/k1')));
+    await assertFails(setDoc(ref(as('u1'),'panduanLangkah/n1'),lgk('n1')));
+    await assertFails(updateDoc(ref(as('u1'),'panduanLangkah/l1'),{isi:'Curang'}));
+    await assertFails(deleteDoc(ref(as('u1'),'panduanLangkah/l1')));
+    await assertFails(setDoc(ref(as('pend'),'panduanKategori/n2'),kat('n2')));
+    await assertFails(setDoc(ref(anon(),'panduanKategori/n3'),kat('n3')));
+  });
+  it('admin membuat, mengubah (termasuk urutan saja), menerbitkan, dan menghapus',async()=>{
+    await assertSucceeds(setDoc(ref(as('adm1'),'panduanKategori/n1'),kat('n1')));
+    await assertSucceeds(updateDoc(ref(as('adm1'),'panduanKategori/n1'),{terbit:true,updatedAt:now()}));
+    await assertSucceeds(updateDoc(ref(as('adm1'),'panduanKategori/n1'),{urutan:0}));
+    await assertSucceeds(setDoc(ref(as('adm1'),'panduanLangkah/n1'),lgk('n1')));
+    await assertSucceeds(updateDoc(ref(as('adm1'),'panduanLangkah/n1'),{isi:'Lebih jelas',updatedAt:now()}));
+    await assertSucceeds(updateDoc(ref(as('adm1'),'panduanLangkah/n1'),{kategoriTerbit:false,tampil:false}));
+    await assertSucceeds(deleteDoc(ref(as('adm1'),'panduanLangkah/n1')));
+    await assertSucceeds(deleteDoc(ref(as('adm1'),'panduanKategori/n1')));
+  });
+  it('admin tetap ditolak untuk nilai tidak sah: field asing, judul kosong/terlalu panjang, urutan di luar rentang, createdAt diubah',async()=>{
+    await assertFails(setDoc(ref(as('adm1'),'panduanKategori/z1'),kat('z1',{foo:1})));
+    await assertFails(setDoc(ref(as('adm1'),'panduanKategori/z2'),kat('z2',{judul:''})));
+    await assertFails(setDoc(ref(as('adm1'),'panduanKategori/z3'),kat('z3',{judul:'x'.repeat(101)})));
+    await assertFails(setDoc(ref(as('adm1'),'panduanKategori/z4'),kat('z4',{urutan:50})));
+    await assertFails(setDoc(ref(as('adm1'),'panduanKategori/z5'),kat('z5',{createdAt:OLD})));
+    await assertFails(updateDoc(ref(as('adm1'),'panduanKategori/k1'),{createdAt:Timestamp.fromDate(new Date('2030-01-01'))}));
+    await assertFails(setDoc(ref(as('adm1'),'panduanLangkah/z6'),lgk('z6',{isi:'x'.repeat(4001)})));
+    await assertSucceeds(setDoc(ref(as('adm1'),'panduanLangkah/z7'),lgk('z7',{isi:'x'.repeat(4000)})));
+    await assertFails(setDoc(ref(as('adm1'),'panduanLangkah/z8'),lgk('z8',{judul:'x'.repeat(121)})));
+    await assertFails(setDoc(ref(as('adm1'),'panduanLangkah/z9'),lgk('z9',{syarat:'x'.repeat(1001)})));
+    await assertFails(setDoc(ref(as('adm1'),'panduanLangkah/y1'),lgk('y1',{lama:'x'.repeat(61)})));
+    await assertFails(setDoc(ref(as('adm1'),'panduanLangkah/y2'),lgk('y2',{urutan:100})));
+    await assertFails(updateDoc(ref(as('adm1'),'panduanLangkah/l1'),{kategoriId:'kd'}));
+  });
+  it('tautan langkah: hanya https Drive/Docs atau kosong',async()=>{
+    for(const [i,u] of [['u1','http://drive.google.com/file/d/abc'],['u2','https://contoh.com/x'],['u3','javascript:alert(1)'],['u4','https://drive.google.com.evil.com/x']])
+      await assertFails(setDoc(ref(as('adm1'),'panduanLangkah/'+i),lgk(i,{url:u})));
+    await assertSucceeds(setDoc(ref(as('adm1'),'panduanLangkah/u5'),lgk('u5',{url:'https://docs.google.com/document/d/abc/edit'})));
+    await assertSucceeds(setDoc(ref(as('adm1'),'panduanLangkah/u6'),lgk('u6',{url:''})));
+  });
+  it('tampil harus sama dengan terbit && kategoriTerbit (langkah dalam kategori draf tidak bisa dibuat tampil)',async()=>{
+    await assertFails(setDoc(ref(as('adm1'),'panduanLangkah/t1'),lgk('t1',{kategoriTerbit:false,tampil:true})));
+    await assertFails(setDoc(ref(as('adm1'),'panduanLangkah/t2'),lgk('t2',{terbit:false,tampil:true})));
+    await assertFails(updateDoc(ref(as('adm1'),'panduanLangkah/ld'),{tampil:true}));
+    await assertSucceeds(setDoc(ref(as('adm1'),'panduanLangkah/t3'),lgk('t3',{terbit:false,tampil:false})));
+  });
+  it('mahasiswa disetujui membaca hanya yang terbit/tampil; draf ditolak',async()=>{
+    await assertSucceeds(getDoc(ref(as('u1'),'panduanKategori/k1')));
+    await assertFails(getDoc(ref(as('u1'),'panduanKategori/kd')));
+    await assertSucceeds(getDoc(ref(as('u1'),'panduanLangkah/l1')));
+    await assertFails(getDoc(ref(as('u1'),'panduanLangkah/ld')));
+    await assertSucceeds(getDocs(query(collection(as('u1'),'panduanKategori'),where('terbit','==',true))));
+    await assertSucceeds(getDocs(query(collection(as('u1'),'panduanLangkah'),where('tampil','==',true))));
+    await assertFails(getDocs(collection(as('u1'),'panduanKategori')));
+    await assertFails(getDocs(collection(as('u1'),'panduanLangkah')));
+    await assertFails(getDocs(query(collection(as('u1'),'panduanLangkah'),where('terbit','==',true))));
+  });
+  it('akun belum disetujui dan anonim tidak bisa membaca; admin membaca semuanya termasuk draf',async()=>{
+    await assertFails(getDoc(ref(as('pend'),'panduanKategori/k1')));
+    await assertFails(getDocs(query(collection(as('pend'),'panduanKategori'),where('terbit','==',true))));
+    await assertFails(getDoc(ref(as('pend'),'panduanLangkah/l1')));
+    await assertFails(getDoc(ref(anon(),'panduanKategori/k1')));
+    await assertSucceeds(getDoc(ref(as('adm1'),'panduanKategori/kd')));
+    await assertSucceeds(getDoc(ref(as('adm1'),'panduanLangkah/ld')));
+    await assertSucceeds(getDocs(collection(as('adm1'),'panduanKategori')));
+  });
+  it('admin menulis panduan dan baris audit log dalam satu batch',async()=>{
+    const {writeBatch}=await import('firebase/firestore');
+    const d=as('adm1'),b=writeBatch(d);
+    b.set(ref(d,'panduanKategori/bt1'),kat('bt1'));
+    b.set(ref(d,'aktivitas/bt1'),{action:'guide_cat_add',ket:'Seminar Hasil',adminUid:'adm1',createdAt:now()});
+    await assertSucceeds(b.commit());
+  });
+  it('penanda langkah (panduanTanda) milik pribadi: pemilik menulis, orang lain tidak membaca, admin hanya membaca',async()=>{
+    const t={id:'u1_l1',ownerUid:'u1',langkahId:'l1',createdAt:now(),updatedAt:now()};
+    await assertSucceeds(setDoc(ref(as('u1'),'panduanTanda/u1_l1'),t));
+    await assertFails(setDoc(ref(as('u1'),'panduanTanda/u2_l1'),{...t,id:'u2_l1',ownerUid:'u2'}));
+    await assertFails(getDoc(ref(as('u2'),'panduanTanda/u1_l1')));
+    await assertSucceeds(getDoc(ref(as('adm1'),'panduanTanda/u1_l1')));
+    await assertFails(deleteDoc(ref(as('adm1'),'panduanTanda/u1_l1')));
+    await assertSucceeds(deleteDoc(ref(as('u1'),'panduanTanda/u1_l1')));
   });
 });

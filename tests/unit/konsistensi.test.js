@@ -5,6 +5,8 @@ import {join,relative} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {PRA,COLS,PAGE,TITLEK} from '../../bimtrack-user/src/config.js';
 import {ACCENTS} from '../../shared/accent.js';
+import {LIM} from '../../shared/panduan.js';
+import {PERAN,DSN} from '../../bimtrack-user/src/config.js';
 
 const root=join(fileURLToPath(new URL('.',import.meta.url)),'..','..');
 const read=p=>readFileSync(join(root,p),'utf8');
@@ -22,12 +24,16 @@ describe('firestore.rules <-> config.js',()=>{
     const tg=[...new Set([...block.matchAll(/'tg_([a-z]+)'/g)].map(m=>m[1]))].sort();
     expect(tg).toEqual(PRA.map(p=>p.k).sort());
   });
-  it('setiap koleksi data di config.js ada di studentCol aturan Firestore',()=>{
+  it('setiap koleksi data di config.js ada di studentCol, atau (koleksi ketat) punya blok aturan sendiri dan TIDAK ada di studentCol',()=>{
     const m=rules.match(/function studentCol\(c\)\s*\{\s*return c in \[([^\]]+)\]/);
     expect(m).toBeTruthy();
     const list=[...m[1].matchAll(/'([A-Za-z]+)'/g)].map(x=>x[1]);
-    Object.keys(COLS).forEach(c=>expect(list).toContain(c));
-    expect(list.filter(c=>!COLS[c])).toEqual(['backupLogs']); // satu-satunya koleksi tambahan yang sah
+    Object.keys(COLS).forEach(c=>{
+      if(COLS[c].strict){expect(list).not.toContain(c);expect(rules).toContain(`match /${c}/{docId}`)}
+      else expect(list).toContain(c);
+    });
+    expect(list.filter(c=>!COLS[c])).toEqual(['backupLogs','panduanTanda']); // koleksi tambahan yang sah (riwayat backup, penanda langkah panduan)
+    expect(list).not.toContain('panduanKategori');expect(list).not.toContain('panduanLangkah');
   });
   it('PAGE dan TITLEK memiliki kunci yang sama dengan COLS',()=>{
     expect(Object.keys(PAGE).sort()).toEqual(Object.keys(COLS).sort());
@@ -111,5 +117,86 @@ describe('pilihan warna',()=>{
 });
 
 describe('berkas yang dijanjikan ada',()=>{
-  it.each(['firestore.rules','firebase.json','README.md','docs/UJI-MANUAL.md','docs/AUDIT-B6.md','tests/rules/rules.test.js','.github/workflows/deploy.yml','.github/workflows/test.yml'])('%s',p=>{expect(existsSync(join(root,p))).toBe(true)});
+  it.each(['firestore.rules','firebase.json','README.md','docs/UJI-MANUAL.md','docs/AUDIT-B6.md','docs/AUDIT-B7.md','bimtrack-admin/src/pages/Panduan.jsx','bimtrack-user/src/Panduan.jsx','bimtrack-user/src/Dosen.jsx','tests/rules/rules.test.js','.github/workflows/deploy.yml','.github/workflows/test.yml'])('%s',p=>{expect(existsSync(join(root,p))).toBe(true)});
+});
+
+describe('Batch 7: dosen dan pejabat',()=>{
+  const blk=rules.slice(rules.indexOf('match /dosenPejabat/'),rules.indexOf('match /panduanKategori/'));
+  it('daftar PERAN di aturan sama persis dengan PERAN di config.js',()=>{
+    const m=blk.match(/d\.peran in \[([^\]]+)\]/);expect(m).toBeTruthy();
+    expect([...m[1].matchAll(/'([^']+)'/g)].map(x=>x[1])).toEqual(PERAN);
+  });
+  it('batas panjang tiap kolom di formulir (max) sama dengan aturan',()=>{
+    const mx=Object.fromEntries(DSN.filter(f=>f.max).map(f=>[f.k,f.max]));
+    expect(mx).toEqual({peranLain:80,nama:150,nip:40,kontak:120,catatan:1000});
+    expect(blk).toContain("isStr(d.nama, 150)");
+    for(const [k,n] of [['peranLain',80],['nip',40],['kontak',120],['catatan',1000]])expect(blk).toContain(`d.get('${k}', '').size() <= ${n}`);
+  });
+  it('field yang diizinkan di aturan = kolom formulir + id, ownerUid, urut, createdAt, updatedAt',()=>{
+    const m=blk.match(/hasOnly\(\[([^\]]+)\]\)/);const keys=[...m[1].matchAll(/'([^']+)'/g)].map(x=>x[1]).sort();
+    expect(keys).toEqual([...DSN.map(f=>f.k),'id','ownerUid','urut','createdAt','updatedAt'].sort());
+  });
+  it('hapus memakai canWriteOwn (lebih ketat dari koleksi lama) dan tidak ada tulis oleh admin',()=>{
+    expect(blk).toMatch(/allow delete: if canWriteOwn\(\)/);expect(blk).not.toMatch(/allow (create|update|delete|write)[^;]*isAdmin\(\)/);
+  });
+  it('Crud memuat pilihan dosen lewat langganan terpisah (galat tidak menutup halaman Bimbingan/Jadwal)',()=>{
+    expect(read('bimtrack-user/src/Crud.jsx')).toMatch(/cb=useCols\(comboSrc,uid\)/);
+  });
+  it('pencarian dan backup menyertakan dosenPejabat sebagai koleksi tambahan',()=>{
+    expect(read('bimtrack-user/src/Search.jsx')).toContain("EXTRA=['jejak','dosenPejabat','skripsi']");
+    expect(read('bimtrack-user/src/ImportExport.jsx')).toContain("dosenPejabat:'dosen dan pejabat'");
+  });
+});
+
+describe('Batch 7: panduan alur (hanya admin menulis)',()=>{
+  const kat=rules.slice(rules.indexOf('match /panduanKategori/'),rules.indexOf('match /panduanLangkah/'));
+  const lgk=rules.slice(rules.indexOf('match /panduanLangkah/'),rules.indexOf('match /skripsi/'));
+  it('semua create/update/delete di dua koleksi panduan mensyaratkan isAdmin(); mahasiswa hanya read',()=>{
+    for(const b of [kat,lgk]){
+      const w=[...b.matchAll(/allow (create|update|delete|write)[^;]*;/g)].map(m=>m[0]);
+      expect(w.length).toBe(3);w.forEach(x=>expect(x).toContain('isAdmin()'));
+      expect(b).toMatch(/allow read: if \(isApproved\(\) && resource\.data\.(terbit|tampil) == true\) \|\| isAdmin\(\)/);
+    }
+  });
+  it('batas teks di aturan sama dengan LIM di shared/panduan.js',()=>{
+    expect(kat).toContain(`isStr(d.judul, ${LIM.JUDUL_KAT})`);
+    expect(lgk).toContain(`isStr(d.judul, ${LIM.JUDUL})`);expect(lgk).toContain(`isStr(d.isi, ${LIM.ISI})`);
+    expect(lgk).toContain(`d.get('syarat', '').size() <= ${LIM.SYARAT}`);expect(lgk).toContain(`d.get('lama', '').size() <= ${LIM.LAMA}`);expect(lgk).toContain(`d.get('url', '').size() <= ${LIM.URL}`);
+  });
+  it('aturan memaksa tampil == (terbit && kategoriTerbit) dan tautan hanya https Drive/Docs',()=>{
+    expect(lgk).toContain('d.tampil == (d.terbit && d.kategoriTerbit)');
+    expect(lgk).toContain("matches('^https://(drive|docs)\\\\.google\\\\.com/.*')");
+  });
+  it('rentang urutan di aturan cukup untuk batas jumlah (kategori < 50, langkah < 100)',()=>{
+    expect(kat).toContain('d.urutan < 50');expect(lgk).toContain('d.urutan < 100');
+    expect(LIM.KATEGORI_MAX).toBeLessThan(50);expect(LIM.LANGKAH_MAX).toBeLessThan(100);
+  });
+  it('aplikasi user tidak pernah menulis koleksi panduan (hanya membaca lewat useData.js)',()=>{
+    files.filter(f=>/^bimtrack-user\/src\/.*\.jsx?$/.test(f)).forEach(f=>{
+      const t=read(f);expect([f,/(setDoc|updateDoc|deleteDoc|writeBatch)[^;]*panduan(Kategori|Langkah)/.test(t)||/doc\(db,\s*'panduan(Kategori|Langkah)'/.test(t)]).toEqual([f,false]);
+    });
+  });
+  it('halaman admin: hapus lewat ConfirmDialog, tiap tulisan memanggil log() (Audit log), dan semua aksi punya label',()=>{
+    const t=read('bimtrack-admin/src/pages/Panduan.jsx'),c=read('bimtrack-admin/src/common.jsx');
+    expect(t).toContain('ConfirmDialog');expect((t.match(/b\.delete\(/g)||[]).length).toBe(3);
+    const acts=[...new Set([...t.matchAll(/'(guide_[a-z_]+)'/g)].map(m=>m[1]))];
+    expect(acts.length).toBeGreaterThanOrEqual(10);
+    acts.forEach(a=>{expect(c).toContain(a+':');expect(a.length).toBeLessThanOrEqual(40)});
+    expect((t.match(/commit\(\(b,t\)=>/g)||[]).length+(t.match(/await commit\(\(b,t\)=>/g)||[]).length).toBeGreaterThan(0);
+  });
+  it('tautan Drive pada langkah hanya dibuka bila lolos isDrive',()=>{
+    expect(read('bimtrack-user/src/Panduan.jsx')).toContain('l.url&&isDrive(l.url)');
+  });
+});
+
+describe('Batch 7: judul skripsi mengalir (tanpa sisa tata letak lama)',()=>{
+  it('tidak ada sisa kode, gaya, atau dokumen tata letak judul lama',()=>{
+    expect(existsSync(join(root,'bimtrack-user/src/titleShape.js'))).toBe(false);
+    expect(existsSync(join(root,'tests/unit/titleShape.test.js'))).toBe(false);
+    src.forEach(f=>expect([f,/segitiga|funnelLines|titleShape|\.jfun|jfun-/i.test(read(f))]).toEqual([f,false]));
+  });
+  it('kartu judul di dasbor memakai teks biasa (jdash), rata kiri, tanpa ukuran huruf yang dihitung',()=>{
+    const css=read('shared/views.css');expect(css).toMatch(/\.jdash-t\{[^}]*text-align:left/);expect(css).not.toMatch(/\.jdash-t\{[^}]*(cqw|clamp)/);
+    expect(read('bimtrack-user/src/Dash.jsx')).toContain('className="jdl jdash-t"');
+  });
 });

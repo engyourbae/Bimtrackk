@@ -22,7 +22,7 @@ service cloud.firestore {
     // ───────────────────────── Fungsi bantu validasi ─────────────────────────
     function isStr(v, max) { return v is string && v.size() > 0 && v.size() <= max; }
     function changedOnly(keys) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys); }
-    function studentCol(c) { return c in ['bimbingan', 'revisi', 'jadwal', 'rundown', 'dokumen', 'fotoRevisi', 'ringkasan', 'backupLogs', 'jejak']; }
+    function studentCol(c) { return c in ['bimbingan', 'revisi', 'jadwal', 'rundown', 'dokumen', 'fotoRevisi', 'ringkasan', 'backupLogs', 'jejak', 'panduanTanda']; }
 
     // ───────────────────────── Admin ─────────────────────────
     match /admins/{uid} {
@@ -144,6 +144,82 @@ service cloud.firestore {
         && request.resource.data.get('createdAt', null) == resource.data.get('createdAt', null)
         && request.resource.data.keys().size() <= 80;
       allow delete: if studentCol(col) && isApproved() && resource.data.ownerUid == dataUid();
+    }
+
+    // ───────────────────────── Dosen dan pejabat (Batch 7) ─────────────────────────
+    // Milik mahasiswa (ownerUid), TIDAK masuk studentCol karena aturannya ketat: daftar field dan panjang dibatasi, daftar PERAN sama dengan PERAN di config.js.
+    // Admin hanya membaca. Jumlah orang tidak dibatasi. `urut` = angka urutan per kelompok peran (nomor "pembimbing 1, 2…" dihitung aplikasi).
+    match /dosenPejabat/{docId} {
+      function dpOk(d) {
+        return d.keys().hasOnly(['id', 'ownerUid', 'peran', 'peranLain', 'nama', 'nip', 'kontak', 'catatan', 'urut', 'createdAt', 'updatedAt'])
+          && d.keys().hasAll(['id', 'ownerUid', 'peran', 'nama'])
+          && d.peran in ['Dosen pembimbing', 'Dosen penguji', 'Ketua Program Studi', 'Dekan', 'Rektor', 'Peran lain']
+          && isStr(d.nama, 150)
+          && d.get('peranLain', '') is string && d.get('peranLain', '').size() <= 80
+          && (d.peran != 'Peran lain' || d.get('peranLain', '').size() > 0)
+          && d.get('nip', '') is string && d.get('nip', '').size() <= 40
+          && d.get('kontak', '') is string && d.get('kontak', '').size() <= 120
+          && d.get('catatan', '') is string && d.get('catatan', '').size() <= 1000
+          && d.get('urut', 0) is int && d.get('urut', 0) >= 0 && d.get('urut', 0) <= 9999
+          && d.get('createdAt', request.time) is timestamp && d.get('updatedAt', request.time) is timestamp;
+      }
+      allow read: if (isApproved() && resource.data.ownerUid == dataUid()) || isAdmin();
+      allow create: if canWriteOwn()
+        && request.resource.data.ownerUid == dataUid()
+        && request.resource.data.id == docId
+        && dpOk(request.resource.data);
+      allow update: if canWriteOwn()
+        && resource.data.ownerUid == dataUid()
+        && request.resource.data.ownerUid == dataUid()
+        && request.resource.data.id == docId
+        && request.resource.data.get('createdAt', null) == resource.data.get('createdAt', null)
+        && dpOk(request.resource.data);
+      allow delete: if canWriteOwn() && resource.data.ownerUid == dataUid();
+    }
+
+    // ───────────────────────── Panduan alur perjalanan (Batch 7) ─────────────────────────
+    // Ditulis HANYA oleh admin; mahasiswa (akun disetujui) hanya membaca yang terbit. Akun belum disetujui tidak bisa membaca.
+    // Kategori: terbit == true. Langkah: tampil == true, dengan tampil == (terbit && kategoriTerbit) dipaksa di sini, jadi langkah dalam kategori draf tidak terbaca mahasiswa.
+    // Aplikasi mahasiswa selalu membaca dengan where('terbit'|'tampil','==',true). Batas jumlah kategori/langkah hanya ditegakkan di klien admin (aturan tidak bisa menghitung dokumen); aturan membatasi rentang urutan dan panjang teks.
+    match /panduanKategori/{docId} {
+      function katOk(d) {
+        return d.keys().hasOnly(['id', 'judul', 'urutan', 'terbit', 'createdAt', 'updatedAt'])
+          && d.keys().hasAll(['id', 'judul', 'urutan', 'terbit', 'createdAt', 'updatedAt'])
+          && d.id == docId
+          && isStr(d.judul, 100)
+          && d.urutan is int && d.urutan >= 0 && d.urutan < 50
+          && d.terbit is bool
+          && d.createdAt is timestamp && d.updatedAt is timestamp;
+      }
+      allow read: if (isApproved() && resource.data.terbit == true) || isAdmin();
+      allow create: if isAdmin() && katOk(request.resource.data) && request.resource.data.createdAt == request.time;
+      allow update: if isAdmin() && katOk(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isAdmin();
+    }
+    match /panduanLangkah/{docId} {
+      function lgkOk(d) {
+        return d.keys().hasOnly(['id', 'kategoriId', 'judul', 'isi', 'syarat', 'lama', 'url', 'urutan', 'terbit', 'kategoriTerbit', 'tampil', 'createdAt', 'updatedAt'])
+          && d.keys().hasAll(['id', 'kategoriId', 'judul', 'isi', 'urutan', 'terbit', 'kategoriTerbit', 'tampil', 'createdAt', 'updatedAt'])
+          && d.id == docId
+          && isStr(d.kategoriId, 64)
+          && isStr(d.judul, 120)
+          && isStr(d.isi, 4000)
+          && d.get('syarat', '') is string && d.get('syarat', '').size() <= 1000
+          && d.get('lama', '') is string && d.get('lama', '').size() <= 60
+          && d.get('url', '') is string && d.get('url', '').size() <= 500
+          && (d.get('url', '') == '' || d.get('url', '').matches('^https://(drive|docs)\\.google\\.com/.*'))
+          && d.urutan is int && d.urutan >= 0 && d.urutan < 100
+          && d.terbit is bool && d.kategoriTerbit is bool
+          && d.tampil == (d.terbit && d.kategoriTerbit)
+          && d.createdAt is timestamp && d.updatedAt is timestamp;
+      }
+      allow read: if (isApproved() && resource.data.tampil == true) || isAdmin();
+      allow create: if isAdmin() && lgkOk(request.resource.data) && request.resource.data.createdAt == request.time;
+      allow update: if isAdmin() && lgkOk(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.kategoriId == resource.data.kategoriId;
+      allow delete: if isAdmin();
     }
 
     // ───────────────────────── Judul skripsi + tahapan pra-skripsi ─────────────────────────

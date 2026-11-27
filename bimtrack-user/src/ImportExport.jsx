@@ -5,6 +5,7 @@ import {useCols} from './useData';
 import {ExportSk} from './PageSkeleton';
 import {COLS,PRA,JUDUL_ST} from './config';
 import {isDriveUrl} from './drive';
+import {sortDosen,assignUrut} from './dosen';
 import {safe,esc,save} from './files';
 import {Select,Badge,DatePicker,Icon,DataState,EmptyState,Skeleton,toast} from './shared/ui';
 import {todayStr,parseDate,isTime} from '@shared/date';
@@ -12,7 +13,7 @@ function parse(t){t=t.replace(/^\uFEFF/,'');const f=t.split(/\r?\n/)[0]||'',d=(f
   for(let i=0;i<t.length;i++){const ch=t[i];if(q){if(ch==='"'){if(t[i+1]==='"'){c+='"';i++}else q=false}else c+=ch}else if(ch==='"')q=true;else if(ch===d){r.push(c);c=''}else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&t[i+1]==='\n')i++;r.push(c);c='';if(r.some(x=>x.trim()))rows.push(r);r=[]}else c+=ch}
   r.push(c);if(r.some(x=>x.trim()))rows.push(r);return rows}
 const iso=v=>{v=(v||'').trim();const m=v.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);return m?`${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`:v};
-const names=Object.keys(COLS).map(k=>COLS[k].t),keyOf=t=>Object.keys(COLS).find(k=>COLS[k].t===t),today=todayStr;
+const OPT={jejak:'jejak',dosenPejabat:'dosen dan pejabat'},names=Object.keys(COLS).map(k=>COLS[k].t),keyOf=t=>Object.keys(COLS).find(k=>COLS[k].t===t),today=todayStr;
 const load=(c,uid)=>getDocs(query(collection(db,c),where('ownerUid','==',uid))).then(s=>s.docs.map(d=>d.data()));
 export default function ImportExport({uid,embedded}){
   const[tab,setTab]=useState('Ekspor'),[col,setCol]=useState('Bimbingan'),[sel,setSel]=useState({}),[from,setFrom]=useState(''),[to,setTo]=useState(''),[delim,setDelim]=useState('Titik koma (Excel Indonesia)');
@@ -20,20 +21,20 @@ export default function ImportExport({uid,embedded}){
   const k=keyOf(col),F=COLS[k].f,cols=F.filter(f=>sel[f.k]!==false),D=delim.startsWith('Titik')?';':',';
   // data koleksi terpilih dan riwayat backup: tiap bagian punya keadaan memuat/kosong/galat sendiri
   const live=useCols([k],uid),rows=live.d[k]||[],lg=useCols(['backupLogs'],uid),logs=[...(lg.d.backupLogs||[])].sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)).slice(0,5);
-  const inRange=r=>{const t=r.tanggal||r.deadline||'';return(!from||t>=from)&&(!to||t<=to)},data=rows.filter(inRange);
+  const inRange=r=>{const t=r.tanggal||r.deadline||'';return(!from||t>=from)&&(!to||t<=to)},data=(k==='dosenPejabat'?sortDosen(rows):rows).filter(inRange);
   const exportCsv=()=>{const t='\uFEFF'+[cols.map(f=>esc(f.label,D)).join(D),...data.map(r=>cols.map(f=>esc(r[f.k]??'',D)).join(D))].join('\r\n');save(`bimtrack-${k}-${today()}.csv`,t,'text/csv;charset=utf-8')};
   const pick=async e=>{const f=e.target.files[0];if(!f)return;const p=parse(await f.text());if(p.length<2)return toast('CSV kosong atau tidak valid','err');const h=p[0].map(x=>x.trim()),m={};
     F.forEach(x=>{const i=h.findIndex(y=>[x.k,x.label].some(z=>z.toLowerCase()===y.toLowerCase()));if(i>=0)m[x.k]=h[i]});setMap(m);setCsv({h,body:p.slice(1)});e.target.value=''};
   const analyze=()=>{if(!csv)return null;const ex=new Set(rows.map(r=>F.filter(f=>f.req).map(f=>String(r[f.k]||'').toLowerCase()).join('|'))),seen=new Set(),ok=[],bad=[],dup=[];
     csv.body.forEach((line,n)=>{const o={};F.forEach(f=>{const i=csv.h.indexOf(map[f.k]);let v=i>=0?(line[i]||'').trim():'';if(f.type==='date')v=iso(v);o[f.k]=v?safe(v):''});
-      let why='';for(const f of F){const v=o[f.k];if(f.req&&!v){why=f.label+' kosong';break}if(v&&f.type==='date'&&!/^\d{4}-\d{2}-\d{2}$/.test(v)){why=f.label+' bukan tanggal valid';break}if(v&&f.type==='select'&&!f.options.includes(v)){why=f.label+' tidak dikenali: '+v;break}if(v&&f.drive&&!/^https:\/\/(drive|docs)\.google\.com\//.test(v)){why=f.label+' bukan link Drive';break}}
+      let why='';for(const f of F){const v=o[f.k];if((f.req||(f.reqIf&&f.reqIf(o)))&&!v){why=f.label+' kosong';break}if(v&&f.max&&v.length>f.max){why=f.label+' terlalu panjang';break}if(v&&f.type==='date'&&!/^\d{4}-\d{2}-\d{2}$/.test(v)){why=f.label+' bukan tanggal valid';break}if(v&&f.type==='select'&&!f.options.includes(v)){why=f.label+' tidak dikenali: '+v;break}if(v&&f.drive&&!/^https:\/\/(drive|docs)\.google\.com\//.test(v)){why=f.label+' bukan link Drive';break}}
       if(why)return bad.push({n:n+2,why});const key=F.filter(f=>f.req).map(f=>String(o[f.k]).toLowerCase()).join('|');if(ex.has(key)||seen.has(key))return dup.push({n:n+2});seen.add(key);ok.push(o)});return{ok,bad,dup}};
   const A=analyze(),dataTab=tab==='Ekspor'||tab==='Impor';
-  const doImport=async()=>{if(!A?.ok.length)return;setBusy(true);const made=[];try{for(let i=0;i<A.ok.length;i+=400){const b=writeBatch(db);A.ok.slice(i,i+400).forEach(o=>{const r=doc(collection(db,k));made.push(r);b.set(r,{...o,id:r.id,ownerUid:uid,createdAt:serverTimestamp(),updatedAt:serverTimestamp()})});await b.commit()}
+  const doImport=async()=>{if(!A?.ok.length)return;setBusy(true);const made=[];try{for(let i=0;i<A.ok.length;i+=400){const b=writeBatch(db);(k==='dosenPejabat'?assignUrut(rows,A.ok):A.ok).slice(i,i+400).forEach(o=>{const r=doc(collection(db,k));made.push(r);b.set(r,{...o,id:r.id,ownerUid:uid,createdAt:serverTimestamp(),updatedAt:serverTimestamp()})});await b.commit()}
     toast(`${A.ok.length} baris diimpor`);setCsv(null)}catch(e){await Promise.all(made.map(r=>deleteDoc(r).catch(()=>{})));toast('Impor gagal dan dibatalkan (rollback): '+e.message,'err')}setBusy(false)};
-  // Backup: koleksi inti wajib berhasil. Jejak dan judul skripsi bersifat tambahan: bila aturan Firestore terbaru belum terbit, dilewati dan dilaporkan jujur.
+  // Backup: koleksi inti wajib berhasil. Jejak, daftar dosen, dan judul skripsi bersifat tambahan: bila aturan Firestore terbaru belum terbit, dilewati dan dilaporkan jujur.
   const backup=async()=>{setBusy(true);try{const out={app:'BIMTRACK',versi:2,ownerUid:uid,createdAt:new Date().toISOString()},counts={},skipped=[];
-    for(const c of Object.keys(COLS)){if(c==='jejak'){try{out[c]=await load(c,uid)}catch{out[c]=[];skipped.push('jejak')}}else out[c]=await load(c,uid);counts[c]=out[c].length}
+    for(const c of Object.keys(COLS)){if(OPT[c]){try{out[c]=await load(c,uid)}catch{out[c]=[];skipped.push(OPT[c])}}else out[c]=await load(c,uid);counts[c]=out[c].length}
     try{out.skripsi=await load('skripsi',uid);counts.skripsi=out.skripsi.length}catch{out.skripsi=[];skipped.push('judul skripsi')}
     save(`bimtrack-backup-${today()}.json`,JSON.stringify(out,null,1),'application/json');const id=doc(collection(db,'backupLogs')).id;setDoc(doc(db,'backupLogs',id),{id,ownerUid:uid,tipe:'json',counts,status:skipped.length?'sebagian':'berhasil',createdAt:serverTimestamp(),updatedAt:serverTimestamp()}).catch(()=>{});
     skipped.length?toast('Backup diunduh, tetapi '+skipped.join(' dan ')+' belum bisa dibaca (terbitkan aturan Firestore terbaru).','err'):toast('Backup diunduh')}catch(e){toast(e.message,'err')}setBusy(false)};
@@ -49,7 +50,7 @@ export default function ImportExport({uid,embedded}){
         <div className="card"><p style={{margin:0}}><Badge>Valid {A.ok.length}</Badge> <Badge>Duplikat {A.dup.length}</Badge> <span className="badge no">Tidak valid {A.bad.length}</span></p>{A.bad.slice(0,8).map(b=><p key={b.n} className="mut" style={{margin:'4px 0',fontSize:'.85rem'}}>Baris {b.n}: {b.why}</p>)}{A.dup.length>0&&<p className="mut" style={{fontSize:'.85rem'}}>Duplikat dilewati: baris {A.dup.slice(0,10).map(d=>d.n).join(', ')}</p>}</div>
         <button className="btn" style={{width:'100%'}} disabled={busy||!A.ok.length} onClick={doImport}>Impor {A.ok.length} baris (data lama tidak diubah)</button></>}</>}</DataState>}
     {tab==='Pulihkan'&&<Restore uid={uid}/>}
-    {tab==='Backup'&&<><p className="mut">Mengunduh seluruh data skripsimu sebagai JSON: bimbingan, revisi, jadwal, rundown, dokumen, bukti, ringkasan, jejak judul dan outline, serta judul dan tahapan pra-skripsi. Backup dibuat manual olehmu, tidak ada backup otomatis. Tanpa kata sandi atau kredensial. Untuk memulihkan, pakai tab Pulihkan.</p><button className="btn" style={{width:'100%'}} disabled={busy} onClick={backup}>Buat backup JSON</button>
+    {tab==='Backup'&&<><p className="mut">Mengunduh seluruh data skripsimu sebagai JSON: bimbingan, revisi, jadwal, rundown, dokumen, bukti, ringkasan, jejak judul dan outline, daftar dosen dan pejabat, serta judul dan tahapan pra-skripsi. Backup dibuat manual olehmu, tidak ada backup otomatis. Tanpa kata sandi atau kredensial. Untuk memulihkan, pakai tab Pulihkan.</p><button className="btn" style={{width:'100%'}} disabled={busy} onClick={backup}>Buat backup JSON</button>
       <h2 style={{marginTop:16}}>Riwayat backup</h2><DataState status={lg.status} error={lg.error} onRetry={lg.retry} compact label="Memuat riwayat backup" skeleton={<Skeleton h={64} r={14}/>} isEmpty={!logs.length} empty={<EmptyState compact title="Belum ada backup" text="Riwayat backup yang kamu buat akan tercatat di sini."/>}>{logs.map(l=><div key={l.id} className="card"><b>{l.createdAt?.toDate?.().toLocaleString('id-ID')||'...'}</b> <Badge>{l.tipe==='restore'?'pulihkan · ':''}{l.status}</Badge><p className="mut" style={{margin:'4px 0',fontSize:'.8rem'}}>{Object.entries(l.counts||{}).map(([a,b])=>a+': '+b).join(' · ')}</p></div>)}</DataState></>}</div>}
 
 
@@ -63,15 +64,16 @@ export function cleanRow(c,raw){
   if(typeof raw.id!=='string'||!ID.test(raw.id))return{why:'ID tidak valid'};
   const o={id:raw.id};
   for(const f of COLS[c].f){let v=raw[f.k];if(v==null)v='';if(typeof v!=='string')return{why:f.label+' bukan teks'};v=v.trim();
-    if(v.length>(f.type==='textarea'?TXT:1000))return{why:f.label+' terlalu panjang'};
-    if(f.req&&!v)return{why:f.label+' kosong'};
+    if(v.length>(f.max||(f.type==='textarea'?TXT:1000)))return{why:f.label+' terlalu panjang'};
+    if((f.req||(f.reqIf&&f.reqIf(o)))&&!v)return{why:f.label+' kosong'};
     if(v&&f.type==='date'&&!parseDate(v))return{why:f.label+' bukan tanggal valid'};
     if(v&&f.type==='time'&&!isTime(v))return{why:f.label+' bukan jam valid'};
     if(v&&f.type==='select'&&!f.options.includes(v))return{why:f.label+' tidak dikenali: '+v.slice(0,30)};
     if(v&&f.drive&&!isDriveUrl(v))return{why:f.label+' bukan link Drive'};
     o[f.k]=v}
-  if(raw.archived===true)o.archived=true;
-  if(Array.isArray(raw.riwayat)){const h=raw.riwayat.slice(0,50).filter(x=>x&&typeof x.s==='string'&&x.s.length<=60&&Number.isFinite(x.t)).map(x=>({s:x.s,t:x.t}));if(h.length)o.riwayat=h}
+  for(const nk of COLS[c].num||[]){const n=raw[nk];if(Number.isInteger(n)&&n>=0&&n<=9999)o[nk]=n} // angka bawaan koleksi (mis. urutan dosen)
+  if(!COLS[c].strict&&raw.archived===true)o.archived=true; // koleksi ketat (aturan Firestore menolak field tambahan) tidak membawa arsip/riwayat
+  if(!COLS[c].strict&&Array.isArray(raw.riwayat)){const h=raw.riwayat.slice(0,50).filter(x=>x&&typeof x.s==='string'&&x.s.length<=60&&Number.isFinite(x.t)).map(x=>({s:x.s,t:x.t}));if(h.length)o.riwayat=h}
   return{o}}
 /** Rapikan dokumen judul skripsi + tahapan pra-skripsi. */
 export function cleanSkripsi(raw){

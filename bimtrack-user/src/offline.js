@@ -5,6 +5,7 @@ import {terminate,clearIndexedDbPersistence,waitForPendingWrites} from 'firebase
 import {auth,db} from './firebase';
 import {resetData} from './useData';
 import {clearSyncState} from './sync';
+import {clearPanduanCache} from './panduanCache';
 const K='bimtrack-offline',F='bimtrack-clearfail',R='bimtrack-logout-msg';
 const store=(s,k,v)=>{try{if(v===undefined)return s.getItem(k);v===null?s.removeItem(k):s.setItem(k,v)}catch{return null}};
 export const offlineOn=()=>store(localStorage,K)==='1';
@@ -26,7 +27,7 @@ export async function logoutUser({clearData,reason}={}){
   resetData();clearSyncState();
   await signOut(auth);
   if(!clearData)return;
-  store(localStorage,K,null);
+  store(localStorage,K,null);clearPanduanCache();
   try{await terminate(db);await clearIndexedDbPersistence(db)}catch{store(sessionStorage,F,'1')}
   location.reload()}
 /** Pesan sekali-tampil untuk layar masuk setelah keluar otomatis (sesi tunggal / admin). */

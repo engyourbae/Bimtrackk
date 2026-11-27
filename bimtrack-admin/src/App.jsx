@@ -9,7 +9,7 @@ import Login from './Login';
 import {ListSk} from './common';
 import {useAdminCols,resetAdminData} from './useAdmin';
 // Satu berkas per halaman, dimuat malas (semua chunk tetap masuk precache PWA).
-const Dashboard=lazy(()=>import('./pages/Dashboard')),Requests=lazy(()=>import('./pages/Requests')),Users=lazy(()=>import('./pages/Users')),Resets=lazy(()=>import('./pages/Resets')),Audit=lazy(()=>import('./pages/Audit')),Settings=lazy(()=>import('./pages/Settings'));
+const Dashboard=lazy(()=>import('./pages/Dashboard')),Requests=lazy(()=>import('./pages/Requests')),Users=lazy(()=>import('./pages/Users')),Resets=lazy(()=>import('./pages/Resets')),Audit=lazy(()=>import('./pages/Audit')),Settings=lazy(()=>import('./pages/Settings')),Panduan=lazy(()=>import('./pages/Panduan'));
 const log=(action,extra={})=>addDoc(collection(db,'aktivitas'),{action,adminUid:auth.currentUser.uid,createdAt:serverTimestamp(),...extra});
 const isAdmin=async u=>{const a=await getDoc(doc(db,'admins',u.uid));return a.exists()&&(a.data().role===true)};
 const out=async()=>{resetAdminData();await signOut(auth)};
@@ -25,12 +25,12 @@ function Panel({onReady}){
   if(u===undefined)return <BootScreen/>;
   if(!u)return <Login err={err}/>;
   return <Badges uid={u.uid}>{({pend,rpend})=>{
-    const NAV=[{k:'home',label:'Dashboard',icon:'home',main:true,group:'Ringkasan'},{k:'req',label:'Permintaan',icon:'inbox',main:true,badge:pend,group:'Akun'},{k:'usr',label:'Pengguna',icon:'users',main:true},{k:'log',label:'Audit log',icon:'audit',main:true,group:'Keamanan'},{k:'rst',label:'Reset Sandi',icon:'key',badge:rpend},{k:'set',label:'Pengaturan',icon:'pengaturan',group:'Sistem'}],
+    const NAV=[{k:'home',label:'Dashboard',icon:'home',main:true,group:'Ringkasan'},{k:'req',label:'Permintaan',icon:'inbox',main:true,badge:pend,group:'Akun'},{k:'usr',label:'Pengguna',icon:'users',main:true},{k:'pdn',label:'Panduan Alur',icon:'timeline',group:'Konten'},{k:'log',label:'Audit log',icon:'audit',main:true,group:'Keamanan'},{k:'rst',label:'Reset Sandi',icon:'key',badge:rpend},{k:'set',label:'Pengaturan',icon:'pengaturan',group:'Sistem'}],
       page0=NAV.some(x=>x.k===pg)?pg:'home';
     return <AppShell admin nav={NAV} page={page0} onNavigate={k=>navigate(k)} identity={u.email||'Administrator'} sub="Administrator" onLogout={out}>
       <div style={{display:'contents'}} data-page={page0}>
         <PwaNotices offlineText="Offline: panel admin butuh internet untuk memuat dan menyimpan data."/>
         <PageBoundary key={page0}><Suspense fallback={<ListSk/>}>
-          {page0==='home'&&<Dashboard uid={u.uid}/>}{page0==='req'&&<Requests uid={u.uid}/>}{page0==='usr'&&<Users uid={u.uid}/>}{page0==='rst'&&<Resets uid={u.uid}/>}{page0==='log'&&<Audit uid={u.uid}/>}{page0==='set'&&<Settings u={u} onLogout={out}/>}
+          {page0==='home'&&<Dashboard uid={u.uid}/>}{page0==='req'&&<Requests uid={u.uid}/>}{page0==='usr'&&<Users uid={u.uid}/>}{page0==='rst'&&<Resets uid={u.uid}/>}{page0==='pdn'&&<Panduan uid={u.uid}/>}{page0==='log'&&<Audit uid={u.uid}/>}{page0==='set'&&<Settings u={u} onLogout={out}/>}
         </Suspense></PageBoundary></div></AppShell>}}</Badges>}
 export default function App(){const[rdy,setRdy]=useState(false);return <><Panel onReady={setRdy}/><Splash ready={rdy}/><ToastHost/></>}

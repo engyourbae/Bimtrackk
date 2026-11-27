@@ -3,9 +3,9 @@
 Tanggal: 27 November 2026. Cakupan: seluruh isi repo (bimtrack-user, bimtrack-admin, shared, landing, firestore.rules, workflow).
 
 ## Status verifikasi — baca ini dulu
-- **Dijalankan di lingkungan pembuatan (tanpa akses internet/npm):** semua tes unit lewat pelari tes sementara yang meniru API Vitest, termasuk hitungan judul segitiga dan progres Outline–Seminar Proposal. Itu membuktikan logikanya, bukan bahwa Vitest asli sudah lulus.
+- **Dijalankan di lingkungan pembuatan (tanpa akses internet/npm):** semua tes unit lewat pelari tes sementara yang meniru API Vitest, termasuk hitungan progres Outline–Seminar Proposal. Itu membuktikan logikanya, bukan bahwa Vitest asli sudah lulus.
 - **BELUM dijalankan:** `npm install`, Vitest asli, tes aturan di Emulator (butuh Java dan firebase-tools), dan build Vite. Jalankan sendiri: `npm install && npm run test:all`, lalu build tiap aplikasi. Bila ada tes yang merah, itu temuan nyata atau salah tulis tes; kabari saya lengkap dengan pesan galatnya.
-- Tampilan baru (judul segitiga, tombol sejajar, warna) belum pernah dilihat di layar. Cek dengan daftar di `docs/UJI-MANUAL.md` bagian 3 dan 4.
+- Tampilan baru (judul dasbor, tombol sejajar, warna) belum pernah dilihat di layar. Cek dengan daftar di `docs/UJI-MANUAL.md` bagian 3 dan 4.
 
 ## Yang diperiksa
 1. Konsistensi aturan Firestore dengan kode (kunci tahap pra-skripsi, daftar koleksi, batas judul, status judul, aturan penutup): diotomatiskan di `tests/unit/konsistensi.test.js`.
@@ -29,4 +29,4 @@ Tanggal: 27 November 2026. Cakupan: seluruh isi repo (bimtrack-user, bimtrack-ad
 Rahasia di repo, `eval`/`innerHTML` berbahaya, tautan `_blank` tanpa `noopener`, koleksi di `config.js` yang tidak terdaftar di aturan, kunci tahap yang berbeda antara kode dan aturan.
 
 ## Yang belum bisa dibuktikan tanpa perangkat
-Kinerja di HP lama, perilaku PWA/notifikasi di iOS, kenyamanan judul segitiga pada judul sangat panjang, dan pembaca layar. Semuanya ada di daftar uji manual.
+Kinerja di HP lama, perilaku PWA/notifikasi di iOS, kenyamanan judul dasbor pada judul sangat panjang, dan pembaca layar. Semuanya ada di daftar uji manual.

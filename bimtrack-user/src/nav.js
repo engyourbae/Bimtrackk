@@ -4,7 +4,9 @@
 export const NAV=[
   {k:'home',label:'Dashboard',short:'Dasbor',icon:'home',main:true,group:'Utama'},
   {k:'prog',label:'Perjalanan Skripsi',icon:'route'},
+  {k:'pdn',label:'Panduan Alur',icon:'timeline'},
   {k:'jjk',label:'Jejak Judul dan Outline',icon:'flag'},
+  {k:'dsn',label:'Dosen dan Pejabat',icon:'users'},
   {k:'jdw',label:'Jadwal Bimbingan',short:'Jadwal',icon:'jadwal',main:true,group:'Kerja bimbingan'},
   {k:'bim',label:'Catatan Bimbingan',short:'Catatan',icon:'bimbingan',main:true},
   {k:'rev',label:'Manajemen Revisi',short:'Revisi',icon:'revisi',main:true},

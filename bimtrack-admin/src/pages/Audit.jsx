@@ -13,6 +13,6 @@ export default function Audit({uid}){
       setMore(m=>[...m,...rows]);if(rows.length<ACT_PAGE)setEnd(true)}catch(e){setErr(navigator.onLine===false?'Perangkat offline. Sambungkan internet lalu coba lagi.':(e.message||'Gagal memuat.'))}setBusy(false)};
   return <div><PageHead title="Audit Log" sub="Riwayat tindakan administrator"/>
     <DataState {...ds(a)} label="Memuat audit log" skeleton={<ListSk/>} isEmpty={!all.length} empty={<EmptyState title="Belum ada aktivitas" text="Tindakan administrator akan tercatat di sini."/>}>
-      {all.map(x=><div className="card" key={x.id}><b>{actLabel(x.action)}</b><p className="mut" style={{margin:'4px 0'}}>{x.nim&&'NIM '+x.nim+' · '}admin {x.adminUid?.slice(0,6)}… · {when(x.createdAt)}{x.reason&&' · '+x.reason}{x.action==='force_logout'&&x.block&&' · akses diblokir'}</p></div>)}
+      {all.map(x=><div className="card" key={x.id}><b>{actLabel(x.action)}</b><p className="mut" style={{margin:'4px 0'}}>{x.nim&&'NIM '+x.nim+' · '}admin {x.adminUid?.slice(0,6)}… · {when(x.createdAt)}{x.reason&&' · '+x.reason}{x.ket&&' · '+x.ket}{x.action==='force_logout'&&x.block&&' · akses diblokir'}</p></div>)}
       {err&&<p className="err" role="alert" style={{margin:'8px 0'}}>{err}</p>}
       {canMore?<Btn className="btn sec block" busy={busy} onClick={load}>Muat lebih banyak</Btn>:all.length>=ACT_HEAD&&<p className="mut" style={{textAlign:'center',fontSize:'var(--fs-sm)'}}>Semua aktivitas sudah ditampilkan.</p>}</DataState></div>}
