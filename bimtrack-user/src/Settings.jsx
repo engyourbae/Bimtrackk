@@ -6,6 +6,7 @@ import {getTheme,setTheme} from './shared/theme';
 import {Pass,Badge,Icon,ThemePick,PageHead,SessionCard,Btn,useFlash,AccountCard,InstallCard,Select,toast} from './shared/ui';
 import {OfflineCard,NotifControl} from './Device';
 import {SesiInfo} from './SesiGate';
+import Accent from './Accent';
 import {logoutUser,LO} from './offline';
 import {navigate} from '@shared/router';
 import {FORMATS,getDateFormat,setDateFormat,fmtDate} from '@shared/date';
@@ -28,6 +29,7 @@ export default function Settings({prof,uid}){
       <Row k="NIM" v={prof.nim}/><Row k="Program studi" v={prof.prodi}/><Row k="Fakultas" v={prof.fakultas}/><Row k="Universitas" v={prof.universitas}/>
       <p className="mut" style={{fontSize:'var(--fs-xs)',margin:'var(--s3) 0 0'}}>Data profil diatur oleh admin saat pendaftaran disetujui. Jika ada yang salah, hubungi admin.</p></section>
     <Sec icon="sun" title="Tampilan"><div className="field"><label>Tema tampilan</label><ThemePick get={getTheme} set={setTheme}/></div>
+      <div className="field"><label>Warna aplikasi</label><Accent/></div>
       <div className="field"><label>Format tanggal</label><Select label="Format tanggal" value={fmt} options={FMT_OPT} onChange={v=>{setDateFormat(v);setFmt(v);toast('Format tanggal: '+fmtDate('2026-11-25',v)+'. Berlaku di halaman yang dibuka berikutnya.')}}/></div></Sec>
     <Sec icon="lock" title="Keamanan"><ChangePass uid={uid}/></Sec>
     <SessionCard app="user"/>

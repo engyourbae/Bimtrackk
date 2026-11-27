@@ -25,7 +25,7 @@ export default function Skripsi({uid}){
           :<EmptyState compact title="Belum ada judul" text="Catat judul skripsimu di sini, termasuk status pengajuannya ke prodi." action={<button type="button" className="btn" onClick={edit}><Icon name="plus" size={18}/> Isi judul</button>}/>}
         <button type="button" className="btn sec block" style={{marginTop:'var(--s3)'}} onClick={()=>navigate('jjk')}><Icon name="flag" size={18}/> Jejak judul dan outline</button></section>
       <section className="card" aria-label="Tahapan pra-skripsi"><div className="sec-h"><h2>Tahapan pra-skripsi</h2><Badge tone={done===PRA.length?'ok':'neutral'}>{done} dari {PRA.length} selesai</Badge></div>
-        <p className="mut" style={{fontSize:'var(--fs-xs)',margin:0}}>Catatan pribadi sebelum Bab I. Tahapan ini tidak dihitung dalam progres Bab I sampai Bab V.</p>
+        <p className="mut" style={{fontSize:'var(--fs-xs)',margin:0}}>Catatan pribadi sebelum Bab I. Tahap yang selesai dihitung sebagai progres Outline sampai Seminar Proposal di dasbor, terpisah dari progres Bab I sampai Bab V.</p>
         <ul className="pra">{PRA.map(p=>{const s=row?.['st_'+p.k]||'belum',t=row?.['tg_'+p.k];
           return <li key={p.k}><div className="pra-t"><b>{p.t}</b>{s==='selesai'&&t?<span className="mut">Selesai {fmtDate(t)}</span>:<span><Badge tone={PRA_TONE[s]}>{PRA_ST.find(x=>x.value===s).label}</Badge></span>}</div>
             <div className="pra-s"><Select label={'Status: '+p.t} value={s} options={PRA_ST} onChange={v=>setStage(p.k,v)}/></div></li>})}</ul></section></div>
