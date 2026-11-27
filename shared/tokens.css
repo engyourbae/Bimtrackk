@@ -76,4 +76,17 @@
   --accent:#D0A253;--accent-text:#E0B56B;--accent-soft:#33291A;
   --logo-g:#D0A253;--panel-gold:#E0B56B;
 }
+/* Pilihan warna aplikasi mahasiswa (Pengaturan > Tampilan). Navy = bawaan, tanpa atribut. Hanya dipasang oleh aplikasi user lewat shared/accent.js;
+   admin tetap memakai ochre. Kontras teks putih di atas warna utama terang ≥ 7:1; tiap warna punya varian gelap. Selektor gelap (3 atribut) sengaja
+   lebih spesifik dari selektor terang agar tidak tertimpa urutan berkas. */
+:root[data-accent=hijau]{--primary:#1F5A43;--primary-hover:#2C7357;--on-primary:#FFFFFF;--primary-soft:#DCEBE3;--accent:#3F8F6B;--accent-text:#226447;--accent-soft:#DDEBE4}
+:root[data-accent=burgundy]{--primary:#7A1F33;--primary-hover:#96304A;--on-primary:#FFFFFF;--primary-soft:#F3E1E5;--accent:#A6465C;--accent-text:#7A1F33;--accent-soft:#F3E1E5}
+:root[data-accent=teal]{--primary:#14595E;--primary-hover:#1F7077;--on-primary:#FFFFFF;--primary-soft:#D9ECEC;--accent:#2F8A90;--accent-text:#14595E;--accent-soft:#D9ECEC}
+:root[data-accent=ungu]{--primary:#5B3A73;--primary-hover:#734C8E;--on-primary:#FFFFFF;--primary-soft:#E9E1F0;--accent:#8A63A6;--accent-text:#5B3A73;--accent-soft:#E9E1F0}
+:root[data-accent=biru]{--primary:#1F4E8C;--primary-hover:#2E63A8;--on-primary:#FFFFFF;--primary-soft:#DFE8F4;--accent:#3F73B5;--accent-text:#1F4E8C;--accent-soft:#DFE8F4}
+:root[data-theme=dark][data-accent=hijau]{--primary:#7FD1A6;--primary-hover:#9BDDBB;--on-primary:#0A1F15;--primary-soft:#1B3A2C;--accent:#6FBF95;--accent-text:#7FD1A6;--accent-soft:#173528}
+:root[data-theme=dark][data-accent=burgundy]{--primary:#E39AAB;--primary-hover:#EDB3C0;--on-primary:#2A0A13;--primary-soft:#3A1D26;--accent:#D0788D;--accent-text:#E39AAB;--accent-soft:#3A1D26}
+:root[data-theme=dark][data-accent=teal]{--primary:#7FCFD2;--primary-hover:#9CDCDE;--on-primary:#07262A;--primary-soft:#16363A;--accent:#5FBEC2;--accent-text:#7FCFD2;--accent-soft:#143338}
+:root[data-theme=dark][data-accent=ungu]{--primary:#C3A8E0;--primary-hover:#D3BEEC;--on-primary:#1E1030;--primary-soft:#2E2240;--accent:#AD8DCC;--accent-text:#C3A8E0;--accent-soft:#2A1F3A}
+:root[data-theme=dark][data-accent=biru]{--primary:#9DBFEF;--primary-hover:#B5D0F6;--on-primary:#0A1A33;--primary-soft:#1B2C47;--accent:#7FA6DE;--accent-text:#9DBFEF;--accent-soft:#1A2C47}
 @media(prefers-reduced-motion:reduce){:root{--dur-fast:1ms;--dur-base:1ms;--dur-slow:1ms}}

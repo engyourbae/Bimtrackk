@@ -136,3 +136,33 @@
 .sort-t>span:last-child{transform:translateY(120%)}
 .sort-t>span.on{transform:none;opacity:1}
 @media(prefers-reduced-motion:reduce){.sort-t>span{transition:none}}
+
+/* ---------- Dasbor: judul skripsi (segitiga terbalik), progres pra-skripsi, tombol sejajar ---------- */
+.jfun{text-align:center;padding:var(--s5) var(--s4) var(--s4);margin-bottom:var(--s4)}
+.jfun-t{container-type:inline-size;margin:var(--s2) 0 var(--s3)}
+.jfun-t .jdl{margin:0;font-weight:700;line-height:1.32;overflow-wrap:normal;font-size:1.05rem;font-size:clamp(.75rem,calc(100cqw / (var(--n,30) * .58)),1.7rem)}
+.jfun-t .l{display:block}
+.jfun-tip{width:0;height:0;margin:0 auto var(--s3);border-left:9px solid transparent;border-right:9px solid transparent;border-top:9px solid var(--accent)}
+.jfun-f{display:flex;align-items:center;justify-content:center;gap:var(--s2);flex-wrap:wrap}
+.jfun.empty{text-align:left}
+@media(min-width:1024px){.jfun{margin-bottom:var(--s6)}}
+/* judul bagian + dua tombol sejajar sama lebar (HP: di bawah judul; layar lebar: di kanan) */
+.sec-h.stk{flex-direction:column;align-items:stretch;gap:var(--s3)}
+.sec-h .acts{display:flex;gap:var(--s2)}.sec-h .acts .btn{flex:1 1 0;min-width:0;padding:0 var(--s2)}
+@media(min-width:640px){.sec-h.stk{flex-direction:row;align-items:center}.sec-h .acts .btn{flex:none;padding:0 var(--s3)}}
+.sub-h{font-size:var(--fs-md);font-weight:700;margin:0 0 var(--s2);color:var(--tx)}
+.pr-sep{border:0;border-top:1px solid var(--bd);margin:var(--s5) 0 var(--s4)}
+.pr-l{list-style:none;margin:var(--s4) 0 0;padding:0;display:grid;gap:var(--s2)}
+.pr-i{display:flex;align-items:center;gap:var(--s3);font-size:var(--fs-sm);min-width:0}
+.pr-d{flex:none;width:20px;height:20px;border-radius:50%;border:2px solid var(--bd-strong);display:grid;place-items:center;color:var(--on-primary)}
+.pr-i.berjalan .pr-d{border-color:var(--accent);background:linear-gradient(90deg,var(--accent) 50%,transparent 50%)}
+.pr-i.selesai .pr-d{border-color:var(--accent);background:var(--accent)}
+.pr-t{flex:1;min-width:0}.pr-i.belum .pr-t{color:var(--tx2)}
+.pr-m{flex:none;font-size:var(--fs-xs);color:var(--tx2);font-weight:600}
+/* pilihan warna aplikasi */
+.acc-pick{display:flex;flex-wrap:wrap;gap:var(--s3)}
+.acc-o{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:56px;padding:var(--s1);background:none;border:0;color:var(--tx2);font-size:var(--fs-xs);font-weight:600}
+.acc-o .sw{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:#fff;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--bd-strong);transition:transform var(--dur-fast) var(--ease)}
+.acc-o:active .sw{transform:scale(.94)}
+.acc-o[aria-checked=true]{color:var(--tx)}.acc-o[aria-checked=true] .sw{box-shadow:0 0 0 2px var(--tx)}
+.acc-o:focus-visible .sw{outline:2px solid var(--primary);outline-offset:3px}
