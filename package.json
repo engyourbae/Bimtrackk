@@ -1,0 +1,19 @@
+{
+  "name": "bimtrack-tests",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Tes otomatis BIMTRACK (unit Vitest + aturan Firestore di Emulator). Aplikasi ada di bimtrack-user/ dan bimtrack-admin/, masing-masing punya package.json sendiri.",
+  "scripts": {
+    "test": "vitest run --config vitest.config.js",
+    "test:unit": "vitest run --config vitest.config.js",
+    "test:rules": "firebase emulators:exec --only firestore --project demo-bimtrack \"vitest run --config vitest.rules.config.js\"",
+    "test:all": "npm run test:unit && npm run test:rules"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^4.0.1",
+    "firebase": "^11.0.0",
+    "firebase-tools": "^13.29.0",
+    "vitest": "^2.1.0"
+  }
+}
