@@ -5,6 +5,7 @@ import './shared/styles.css';
 import {applyTheme} from '@shared/theme';
 import App from './App';
 import {registerPwa} from '@shared/pwa';
-applyTheme();
+import {lockGestures} from '@shared/motion';
+applyTheme();lockGestures();
 createRoot(document.getElementById('root')).render(<App/>);
 registerPwa();
