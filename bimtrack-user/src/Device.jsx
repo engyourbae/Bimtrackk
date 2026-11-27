@@ -47,4 +47,4 @@ export function NotifControl(){
       <b>Izin notifikasi diblokir.</b> BIMTRACK tidak bisa mengubahnya; izin hanya bisa diubah dari pengaturan Chrome atau Android.
       {STEPS}<button type="button" className="btn sec sm" onClick={sync}>Periksa lagi</button></div></div>}
     {perm==='unsupported'&&<p className="mut" style={{margin:0}}>Peramban ini tidak mendukung notifikasi. Di iPhone/iPad, pasang BIMTRACK ke Layar Utama dulu (iOS 16.4 ke atas).</p>}
-    <p className="hint mut" style={{margin:0}}>Gratis, tanpa server: notifikasi berbunyi dan muncul selama BIMTRACK terbuka di perangkat ini. Saat aplikasi tertutup, notifikasi butuh server berbayar (Blaze) dan tidak diaktifkan.</p></div>}
+    <p className="hint mut" style={{margin:0}}>Pengingat berbunyi dan muncul 30 menit sebelum jadwal selama BIMTRACK sedang dibuka di perangkat ini. Pengingat tidak muncul saat aplikasi ditutup.</p></div>}
