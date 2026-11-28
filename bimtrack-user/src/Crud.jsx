@@ -9,7 +9,7 @@ import {navigate} from '@shared/router';
 import {PAGE,REL_LABEL} from './config';
 import {parseDrive,isDriveUrl} from './drive';
 import {ListSkeleton} from './PageSkeleton';
-import {dosenOptions} from './dosen';
+import {sortDosen,roleLabel} from './dosen';
 
 const show=(fields,k,v)=>fields.find(f=>f.k===k)?.type==='date'?fmtDate(v):v;
 const ls=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch{return null}};
@@ -34,6 +34,22 @@ function Thumb({url}){
   const t=parseDrive(url)?.thumb,[bad,setBad]=useState(false);
   return t&&!bad?<img className="gal-i" src={t} alt="" loading="lazy" referrerPolicy="no-referrer" onError={()=>setBad(true)}/>:<span className="gal-i ph"><Icon name="image" size={28}/></span>}
 
+/** Isian nama dengan dropdown kustom: tiap pilihan menampilkan peran (mis. Dosen pembimbing 1) dan namanya; tetap bisa diketik bebas. */
+function ComboField({id,value,onChange,items,invalid}){
+  const[open,setOpen]=useState(false),q=String(value||'').trim().toLowerCase(),exact=items.some(o=>o.nama.toLowerCase()===q),
+    list=!q||exact?items:items.filter(o=>(o.nama+' '+o.label).toLowerCase().includes(q));
+  const pick=o=>{onChange(o.nama);setOpen(false)};
+  return <div style={{position:'relative'}} onBlur={e=>{if(!e.currentTarget.contains(e.relatedTarget))setOpen(false)}}>
+    <input id={id} className="in" autoComplete="off" role="combobox" aria-expanded={open} aria-controls={id+'-l'} value={value} aria-invalid={invalid||undefined} style={items.length?{paddingRight:44}:undefined}
+      onFocus={()=>setOpen(true)} onChange={e=>{onChange(e.target.value);setOpen(true)}} onKeyDown={e=>{if(e.key==='Escape')setOpen(false)}}/>
+    {items.length>0&&<button type="button" tabIndex={-1} aria-label="Buka daftar" onMouseDown={e=>e.preventDefault()} onClick={()=>setOpen(o=>!o)} style={{position:'absolute',right:4,top:0,bottom:0,width:40,background:'none',border:0,color:'var(--tx2)',fontSize:'.8rem'}}>{open?'▲':'▼'}</button>}
+    {open&&list.length>0&&<div id={id+'-l'} role="listbox" style={{position:'absolute',left:0,right:0,top:'calc(100% + 4px)',zIndex:30,maxHeight:240,overflowY:'auto',background:'var(--surface)',border:'1px solid var(--bd-strong)',borderRadius:'var(--r-md)',boxShadow:'0 8px 24px rgba(0,0,0,.18)'}}>
+      {list.map(o=><button type="button" role="option" aria-selected={o.nama===value} key={o.nama} onMouseDown={e=>e.preventDefault()} onClick={()=>pick(o)}
+        style={{display:'flex',flexDirection:'column',alignItems:'flex-start',gap:2,width:'100%',textAlign:'left',padding:'10px var(--s4)',border:0,borderBottom:'1px solid var(--bd)',background:o.nama===value?'var(--surface-2)':'transparent',color:'var(--tx)'}}>
+        <small style={{color:'var(--tx2)',fontSize:'var(--fs-xs)'}}>{o.label}</small><span style={{fontWeight:600,overflowWrap:'anywhere'}}>{o.nama}</span></button>)}
+    </div>}
+  </div>}
+
 export default function Crud({col,uid,title,heading,listTitle,embedded,fields,titleKey,subKeys,filters=[],sortKey='tanggal',urlKey,badge,header,autoNew,onAutoNew,openId,onOpenId,
   statusKey,tones={},titleOf,sortFn,extra,reorder,history,doneStatus,doneKey,defaults,relations=[],actions=[],archivable,views=['list'],groupKey,range,scope,scopeKey='',descDefault=true,timeKey,sortLabels=['Terbaru','Terlama']}){
   const[q,setQ]=useState(''),[fv,setFv]=useState(()=>takeFilter(col)),[rg,setRg]=useState({}),[desc,setDesc]=useState(descDefault),[showF,setShowF]=useState(false),
@@ -45,7 +61,7 @@ export default function Crud({col,uid,title,heading,listTitle,embedded,fields,ti
   const live=useCols([col,...relCols.filter(c=>c!==col)],uid),rel=live.d,rows=live.status==='ready'?(live.d[col]??null):null;
   // sumber pilihan untuk isian bertipe combo (mis. nama dosen): langganan TERPISAH agar galatnya tidak menutup halaman ini
   const comboSrc=useMemo(()=>[...new Set(fields.filter(f=>f.type==='combo').map(f=>f.src))],[fields]),cb=useCols(comboSrc,uid);
-  const comboOpts=f=>cb.status==='ready'?dosenOptions(cb.d[f.src]||[],f.roles):[];
+  const comboOpts=f=>{if(cb.status!=='ready')return[];const rows=cb.d[f.src]||[],seen=new Set();return sortDosen(rows).filter(r=>!f.roles||f.roles.includes(r.peran)).map(r=>({nama:String(r.nama||'').trim(),label:roleLabel(r,rows)})).filter(o=>o.nama&&!seen.has(o.nama)&&seen.add(o.nama))};
   const tt=x=>(titleOf?titleOf(x,rows||[]):x[titleKey]);
   const vis=x=>!x.showIf||x.showIf(form||{});
   const empty=()=>{const base={...(defaults?.()||{})};filters.forEach(f=>{if(fv[f.key]&&(f.options||f.from)&&fields.some(x=>x.k===f.key))base[f.key]=fv[f.key]});return{...base,...takePrefill(col)}};
@@ -159,8 +175,8 @@ export default function Crud({col,uid,title,heading,listTitle,embedded,fields,ti
         :x.type==='select'?<Select id={id} label={x.label} value={v} options={x.options} placeholder={'Pilih '+x.label.toLowerCase()} invalid={!!er} onChange={set(x.k)}/>
         :x.type==='date'?<DatePicker id={id} label={x.label} value={v} invalid={!!er} onChange={set(x.k)}/>
         :x.type==='time'?<TimePicker id={id} label={x.label} value={v} invalid={!!er} onChange={set(x.k)}/>
-        :x.type==='combo'?<><input id={id} className="in" list={id+'-l'} autoComplete="off" value={v} aria-invalid={!!er||undefined} onChange={e=>set(x.k)(e.target.value)}/><datalist id={id+'-l'}>{comboOpts(x).map(o=><option key={o} value={o}/>)}</datalist>
-          <div className="hint">{comboOpts(x).length?'Ketuk kolom lalu pilih dari Daftar Dosen dan Pejabat, atau ketik sendiri.':'Bebas diketik. Tambahkan dosen di Dosen dan Pejabat agar bisa dipilih dari daftar.'}</div></>
+        :x.type==='combo'?<><ComboField id={id} value={v} invalid={!!er} items={comboOpts(x)} onChange={set(x.k)}/>
+          <div className="hint">{comboOpts(x).length?'Ketuk kolom lalu pilih dosen atau pejabat (Dosen pembimbing 1, 2, Kaprodi, dst), atau ketik sendiri (mis. TU).':'Bebas diketik. Tambahkan dosen di Dosen dan Pejabat agar bisa dipilih dari daftar.'}</div></>
         :x.type==='textarea'?<textarea id={id} className="in" value={v} aria-invalid={!!er||undefined} onChange={e=>set(x.k)(e.target.value)}/>
         :<input id={id} className="in" type={x.type==='url'?'url':'text'} inputMode={x.type==='url'?'url':undefined} value={v} aria-invalid={!!er||undefined} onChange={e=>set(x.k)(e.target.value)}/>}
         {er&&<div className="err" role="alert">{er}</div>}
