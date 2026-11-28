@@ -14,7 +14,7 @@ import {save} from './files';
 
 const ls=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch{return null}};
 
-function Item({x,onOpen}){return <button type="button" className="wk-i" onClick={()=>onOpen(x.id)}><b>{x.jam||'--:--'}</b><span className="wk-t"><span>{x.agenda}</span><small className="mut">{[x.dosen,x.lokasi].filter(Boolean).join(' · ')}</small></span>{x.status&&<Badge tone={JDW_TONE[x.status]||'neutral'}>{x.status}</Badge>}</button>}
+function Item({x,onOpen}){return <button type="button" className="wk-i" onClick={()=>onOpen(x.id)}><b>{x.jam||'--:--'}</b><span className="wk-t"><span>{x.agenda}</span><small className="mut">{[x.dosen,x.lokasi].filter(Boolean).join(' · ')}</small>{x.status&&<span style={{marginTop:6,alignSelf:'flex-start'}}><Badge tone={JDW_TONE[x.status]||'neutral'}>{x.status}</Badge></span>}</span></button>}
 
 /** Tampilan mingguan: tujuh baris hari (Senin–Minggu), cocok di HP maupun laptop. */
 function WeekView({rows,onOpen}){
